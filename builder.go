@@ -10,14 +10,14 @@ import (
 // Builder ...
 type Builder struct {
 	sqlType     SQLType
-	QueryTables string
+	queryTables string // abandoned
 	queryArgs   []interface{}
 	query       string
-	from        string
+	from        string // abandoned
 	setValues   []string
-	where       []string
-	orderBy     string
-	limit       string
+	where       []string // abandoned
+	orderBy     string   // abandoned
+	limit       string   // abandoned
 	ErrList     []error
 	lastQueries []*Query
 }
@@ -26,7 +26,7 @@ type Builder struct {
 func New() *Builder {
 	return &Builder{
 		sqlType:     0,
-		QueryTables: "",
+		queryTables: "",
 		queryArgs:   []interface{}{},
 		query:       "",
 		from:        "",
@@ -55,9 +55,20 @@ func (b *Builder) renew(st SQLType) {
 	b.limit = ""
 }
 
-// QueryArgs ...
+// Clear clear current query & query args
+func (b *Builder) Clear() *Builder {
+	b.renew(0)
+	return b
+}
+
+// QueryArgs return current query args
 func (b *Builder) QueryArgs() []interface{} {
 	return b.queryArgs
+}
+
+// Query return current sql
+func (b *Builder) Query() string {
+	return b.query
 }
 
 // Append append query & query args to origin query

@@ -208,9 +208,10 @@ func TestInsert(t *testing.T) {
 	// 	tableName: "user",
 	// 	Fields:    []string{"id", "name", "age", "sex", "birthday"},
 	// }
-	want = "INSERT INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?)"
+	want = "INSERT INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)"
+	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", 1, "coder", 25, "male", "2000/09/01"}
 	vals := []interface{}{1, "coder", 25, "male", "2000/09/01"}
-	valsGroup := [][]interface{}{vals}
+	valsGroup := [][]interface{}{vals, vals}
 	b.Insert(d.TableName(), d.Fields()...).
 		Values(valsGroup...)
 	q, err = b.Build()
@@ -220,8 +221,6 @@ func TestInsert(t *testing.T) {
 	if err != nil {
 		t.Errorf("insert error:%s", err)
 	}
-
-	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01"}
 
 	if want != got {
 		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
@@ -291,6 +290,10 @@ func TestRawBuild(t *testing.T) {
 		err            error
 		q              *Query
 	)
+	q, err = b.Clear().Build()
+	if err == nil || err.Error() != "empty build" {
+		t.Errorf("unexcept error: %#v, q=%#v", err, q)
+	}
 	want = "SELECT"
 	q, err = b.Select().From().Build()
 	got = q.Query
@@ -332,7 +335,10 @@ func TestRawBuild(t *testing.T) {
 
 	want = "/* just a comment */ SELECT * FROM `tablename` WHERE `name` = ?"
 	wantArgs = []interface{}{"yourname"}
-	b.Select("*").From("tablename").Append(" WHERE `name` = ?", "yourname").AppendPre("/* just a comment */ ")
+	b.Select("something").From("world").Clear().Select("*").From("tablename").Append(" WHERE `name` = ?", "yourname").AppendPre("/* just a comment */ ")
+	q.Query = b.Query()
+	q.Args = b.QueryArgs()
+
 	q, err = b.Build("test")
 	got = q.Query
 	args = q.Args
