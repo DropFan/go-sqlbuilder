@@ -5,3 +5,12 @@ go:
   - 1.8
   - 1.9
   - tip
+before_install:
+  - go get github.com/tebben/overalls
+  - go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
+
+script:
+  - go test ./...
+  - overalls -project=github.com/DropFan/go-sqlbuilder -covermode=count -ignore=".git" -debug true
+  - goveralls -coverprofile=/home/travis/gopath/src/github.com/DropFan/go-sqlbuilder/overalls.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN

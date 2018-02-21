@@ -1,6 +1,10 @@
 # go-sqlbuilder
 
-[![Build Status](https://travis-ci.org/DropFan/go-sqlbuilder.svg?branch=master)](https://travis-ci.org/DropFan/go-sqlbuilder)[![Go Report Card](https://goreportcard.com/report/github.com/DropFan/go-sqlbuilder)](https://goreportcard.com/badge/github.com/DropFan/go-sqlbuilder)
+[![Build Status](https://travis-ci.org/DropFan/go-sqlbuilder.svg?branch=master)](https://travis-ci.org/DropFan/go-sqlbuilder)
+[![Go Report Card](https://goreportcard.com/badge/github.com/DropFan/go-sqlbuilder)](https://goreportcard.com/report/github.com/DropFan/go-sqlbuilder)
+[![Coverage Status](https://coveralls.io/repos/github/DropFan/go-sqlbuilder/badge.svg?branch=master)](https://coveralls.io/github/DropFan/go-sqlbuilder?branch=master)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DropFan/go-sqlbuilder/blob/master/LICENSE)
+
 
 (unfinished) a very simple sql builder for golang.
 
