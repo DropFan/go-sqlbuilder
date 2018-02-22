@@ -24,15 +24,32 @@ func newCondition(andOr bool, field string, op string, values []interface{}) Con
 	}
 }
 
-// NewConditionAnd ...
-func NewConditionAnd(field string, op string, values []interface{}) Condition {
+// And return and condition
+func And(field string, op string, values ...interface{}) Condition {
 	return newCondition(true, field, op, values)
 }
 
-// NewConditionOr ...
-func NewConditionOr(field string, op string, values []interface{}) Condition {
+// Or return or condition
+func Or(field string, op string, values ...interface{}) Condition {
 	return newCondition(false, field, op, values)
 }
+
+// NewConditionGroup ...
+func NewConditionGroup(conds ...Condition) (cg []Condition) {
+	// cg = make([]Condition, len(conds))
+	cg = append(cg, conds...)
+	return
+}
+
+// // NewConditionAnd ...
+// func NewConditionAnd(field string, op string, values []interface{}) Condition {
+// 	return newCondition(true, field, op, values)
+// }
+
+// // NewConditionOr ...
+// func NewConditionOr(field string, op string, values []interface{}) Condition {
+// 	return newCondition(false, field, op, values)
+// }
 
 // newOrderCondition : get new Order Condition
 func newOrderCondition(field string, asc bool) Condition {

@@ -108,7 +108,7 @@ func Test_newCondition(t *testing.T) {
 	}
 }
 
-func TestNewConditionAnd(t *testing.T) {
+func TestAnd(t *testing.T) {
 	type args struct {
 		field  string
 		op     string
@@ -137,14 +137,14 @@ func TestNewConditionAnd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotCond := NewConditionAnd(tt.args.field, tt.args.op, tt.args.values); !reflect.DeepEqual(gotCond, tt.want) {
-				t.Errorf("NewConditionAnd() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			if gotCond := And(tt.args.field, tt.args.op, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("And() = \n%#v\n, want\n%#v", gotCond, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewConditionOr(t *testing.T) {
+func TestOr(t *testing.T) {
 	type args struct {
 		field  string
 		op     string
@@ -173,8 +173,8 @@ func TestNewConditionOr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotCond := NewConditionOr(tt.args.field, tt.args.op, tt.args.values); !reflect.DeepEqual(gotCond, tt.want) {
-				t.Errorf("NewConditionOr() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			if gotCond := Or(tt.args.field, tt.args.op, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Or() = \n%#v\n, want\n%#v", gotCond, tt.want)
 			}
 		})
 	}
@@ -280,6 +280,34 @@ func TestOrderAsc(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := OrderAsc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("OrderAsc() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewConditionGroup(t *testing.T) {
+	tests := []struct {
+		name  string
+		conds []Condition
+		want  []Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "test_condition_group",
+			conds: []Condition{
+				nameEqCoder,
+				ageBetweenCond,
+			},
+			want: []Condition{
+				nameEqCoder,
+				ageBetweenCond,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewConditionGroup(tt.conds...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewConditionGroup() = %v, want %v", got, tt.want)
 			}
 		})
 	}
