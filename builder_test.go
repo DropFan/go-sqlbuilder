@@ -87,7 +87,7 @@ func TestSelect(t *testing.T) {
 	wantArgs = []interface{}{"coder", "hacker", "female", "coder"}
 	b.Select(d.Fields()...).
 		From("user").
-		Where([]Condition{errOpCond, nameInNames, sexEqFemale}...).
+		Where([]*Condition{errOpCond, nameInNames, sexEqFemale}...).
 		Or(nameEqCoder).And(errValNumCond).
 		Or().
 		OrderBy(ageDesc, nameAsc).Limit(100).Limit(0, 100)
@@ -132,18 +132,12 @@ func TestUpdate(t *testing.T) {
 		args, wantArgs []interface{}
 		q              *Query
 		err            error
-		fvals          = []FieldValue{
-			FieldValue{Name: "tag", Value: "test"},
-			FieldValue{Name: "desc", Value: "just 4 test"},
+		fvals          = []*FieldValue{
+			&FieldValue{Name: "tag", Value: "test"},
+			&FieldValue{Name: "desc", Value: "just 4 test"},
 		}
-		fv = FieldValue{
-			Name:  "f",
-			Value: "v",
-		}
-		kv = FieldValue{
-			Name:  "k",
-			Value: "v",
-		}
+		fv = NewFV("f", "v")
+		kv = NewKV("k", "v")
 	)
 	AndSexEqFemale := sexEqFemale
 	AndSexEqFemale.AndOr = true

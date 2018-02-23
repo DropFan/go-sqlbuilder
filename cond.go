@@ -15,8 +15,8 @@ type Condition struct {
 }
 
 // newCondition : get new Condition
-func newCondition(andOr bool, field string, op string, values []interface{}) Condition {
-	return Condition{
+func newCondition(andOr bool, field string, op string, values []interface{}) *Condition {
+	return &Condition{
 		AndOr:    andOr,
 		Field:    field,
 		Operator: op,
@@ -25,17 +25,17 @@ func newCondition(andOr bool, field string, op string, values []interface{}) Con
 }
 
 // And return and condition
-func And(field string, op string, values ...interface{}) Condition {
+func And(field string, op string, values ...interface{}) *Condition {
 	return newCondition(true, field, op, values)
 }
 
 // Or return or condition
-func Or(field string, op string, values ...interface{}) Condition {
+func Or(field string, op string, values ...interface{}) *Condition {
 	return newCondition(false, field, op, values)
 }
 
 // NewConditionGroup ...
-func NewConditionGroup(conds ...Condition) (cg []Condition) {
+func NewConditionGroup(conds ...*Condition) (cg []*Condition) {
 	// cg = make([]Condition, len(conds))
 	cg = append(cg, conds...)
 	return
@@ -52,19 +52,19 @@ func NewConditionGroup(conds ...Condition) (cg []Condition) {
 // }
 
 // newOrderCondition : get new Order Condition
-func newOrderCondition(field string, asc bool) Condition {
-	return Condition{
+func newOrderCondition(field string, asc bool) *Condition {
+	return &Condition{
 		Field: field,
 		Asc:   asc,
 	}
 }
 
 // OrderDesc ...
-func OrderDesc(field string) Condition {
+func OrderDesc(field string) *Condition {
 	return newOrderCondition(field, false)
 }
 
 // OrderAsc ...
-func OrderAsc(field string) Condition {
+func OrderAsc(field string) *Condition {
 	return newOrderCondition(field, true)
 }

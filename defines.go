@@ -16,12 +16,6 @@ const (
 	DeleteSQL
 )
 
-// FieldValue ...
-type FieldValue struct {
-	Name  string
-	Value interface{}
-}
-
 // func (f *FieldValue) String() string {
 // 	return f.Name
 // }

@@ -152,7 +152,7 @@ func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 }
 
 // Update ...
-func (b *Builder) Update(tableName string, fvals ...FieldValue) *Builder {
+func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(UpdateSQL)
 	b.query = "UPDATE `" + tableName + "` SET "
 
@@ -164,7 +164,7 @@ func (b *Builder) Update(tableName string, fvals ...FieldValue) *Builder {
 }
 
 // Set ...
-func (b *Builder) Set(fvals ...FieldValue) *Builder {
+func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 	// b.setValue = ""
 
 	for i, fval := range fvals {
@@ -220,7 +220,7 @@ func (b *Builder) From(tables ...string) *Builder {
 }
 
 // Where ...
-func (b *Builder) addConditions(conditions ...Condition) *Builder {
+func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 	condSlice := []string{}
 	for i, cond := range conditions {
 		condStr, args, err := b.buildCondition(cond)
@@ -247,7 +247,7 @@ func (b *Builder) addConditions(conditions ...Condition) *Builder {
 }
 
 // And ...
-func (b *Builder) And(conditions ...Condition) *Builder {
+func (b *Builder) And(conditions ...*Condition) *Builder {
 	switch len(conditions) {
 	case 0:
 		return b
@@ -269,7 +269,7 @@ func (b *Builder) And(conditions ...Condition) *Builder {
 }
 
 // Or ...
-func (b *Builder) Or(conditions ...Condition) *Builder {
+func (b *Builder) Or(conditions ...*Condition) *Builder {
 	switch len(conditions) {
 	case 0:
 		return b
@@ -292,7 +292,7 @@ func (b *Builder) Or(conditions ...Condition) *Builder {
 }
 
 // Where ...
-func (b *Builder) Where(conditions ...Condition) *Builder {
+func (b *Builder) Where(conditions ...*Condition) *Builder {
 	b.query += " WHERE "
 	if len(conditions) == 0 {
 		b.query += "1"
@@ -304,7 +304,7 @@ func (b *Builder) Where(conditions ...Condition) *Builder {
 }
 
 // BuildWhere ...
-func (b *Builder) buildCondition(cond Condition) (str string, queryArgs []interface{}, err error) {
+func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []interface{}, err error) {
 	str = ""
 	queryArgs = []interface{}{}
 
@@ -352,7 +352,7 @@ func (b *Builder) buildCondition(cond Condition) (str string, queryArgs []interf
 }
 
 // OrderBy ...
-func (b *Builder) OrderBy(conditions ...Condition) *Builder {
+func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 	// order, err := buildOrderBy(conditions)
 	b.query += " ORDER BY "
 

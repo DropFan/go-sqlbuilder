@@ -6,51 +6,51 @@ import (
 )
 
 var (
-	ageGT1 = Condition{
+	ageGT1 = &Condition{
 		Field:    "age",
 		Operator: ">=",
 		Values:   []interface{}{1},
 	}
-	nameEqCoder = Condition{
+	nameEqCoder = &Condition{
 		// AndOr:    true,
 		Field:    "name",
 		Operator: "=",
 		Values:   []interface{}{"coder"},
 	}
-	nameInNames = Condition{
+	nameInNames = &Condition{
 		AndOr:    true,
 		Field:    "name",
 		Operator: "IN",
 		Values:   []interface{}{"coder", "hacker"},
 	}
-	sexEqFemale = Condition{
+	sexEqFemale = &Condition{
 		Field:    "sex",
 		Operator: "=",
 		Values:   []interface{}{"female"},
 	}
-	ageBetweenCond = Condition{
+	ageBetweenCond = &Condition{
 		Field:    "age",
 		Operator: "BETWEEN",
 		Values:   []interface{}{12, 36},
 	}
 
-	whereConds = []Condition{}
+	whereConds = []*Condition{}
 	// orConds := []Condition{sexEqFemale, ageGT1}
 
-	errOpCond = Condition{
+	errOpCond = &Condition{
 		Field:    "test",
 		Operator: "!",
 	}
-	errValNumCond = Condition{
+	errValNumCond = &Condition{
 		Field:    "test_field",
 		Operator: "=",
 		Values:   []interface{}{1, 2},
 	}
-	ageDesc = Condition{
+	ageDesc = &Condition{
 		Field: "age",
 		Asc:   false,
 	}
-	nameAsc = Condition{
+	nameAsc = &Condition{
 		Field: "name",
 		Asc:   true,
 	}
@@ -66,7 +66,7 @@ func Test_newCondition(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -76,7 +76,7 @@ func Test_newCondition(t *testing.T) {
 				op:     "=",
 				values: []interface{}{"hacker"},
 			},
-			want: Condition{
+			want: &Condition{
 				AndOr:    false,
 				Field:    "name",
 				Operator: "=",
@@ -91,7 +91,7 @@ func Test_newCondition(t *testing.T) {
 				op:     "=",
 				values: []interface{}{"hacker"},
 			},
-			want: Condition{
+			want: &Condition{
 				AndOr:    true,
 				Field:    "name",
 				Operator: "=",
@@ -117,7 +117,7 @@ func TestAnd(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -127,7 +127,7 @@ func TestAnd(t *testing.T) {
 				op:     "=",
 				values: []interface{}{"hacker"},
 			},
-			want: Condition{
+			want: &Condition{
 				AndOr:    true,
 				Field:    "name",
 				Operator: "=",
@@ -153,7 +153,7 @@ func TestOr(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -163,7 +163,7 @@ func TestOr(t *testing.T) {
 				op:     "=",
 				values: []interface{}{"hacker"},
 			},
-			want: Condition{
+			want: &Condition{
 				AndOr:    false,
 				Field:    "name",
 				Operator: "=",
@@ -188,7 +188,7 @@ func Test_newOrderCondition(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -197,7 +197,7 @@ func Test_newOrderCondition(t *testing.T) {
 				field: "age",
 				asc:   false,
 			},
-			want: Condition{
+			want: &Condition{
 				Field: "age",
 				Asc:   false,
 			},
@@ -208,7 +208,7 @@ func Test_newOrderCondition(t *testing.T) {
 				field: "age",
 				asc:   true,
 			},
-			want: Condition{
+			want: &Condition{
 				Field: "age",
 				Asc:   true,
 			},
@@ -217,7 +217,7 @@ func Test_newOrderCondition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotCond := newOrderCondition(tt.args.field, tt.args.asc); !reflect.DeepEqual(gotCond, tt.want) {
-				t.Errorf("newOrderCondition() = %v, want %v", gotCond, tt.want)
+				t.Errorf("newOrderCondition() = %+v, want %+v", gotCond, tt.want)
 			}
 		})
 	}
@@ -230,7 +230,7 @@ func TestOrderDesc(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -239,7 +239,7 @@ func TestOrderDesc(t *testing.T) {
 				field: "age",
 				// asc:   false,
 			},
-			want: Condition{
+			want: &Condition{
 				Field: "age",
 				Asc:   false,
 			},
@@ -248,7 +248,7 @@ func TestOrderDesc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := OrderDesc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("OrderDesc() = %v, want %v", got, tt.want)
+				t.Errorf("OrderDesc() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
@@ -261,7 +261,7 @@ func TestOrderAsc(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want Condition
+		want *Condition
 	}{
 		// TODO: Add test cases.
 		{
@@ -270,7 +270,7 @@ func TestOrderAsc(t *testing.T) {
 				field: "age",
 				// asc:   false,
 			},
-			want: Condition{
+			want: &Condition{
 				Field: "age",
 				Asc:   true,
 			},
@@ -279,7 +279,7 @@ func TestOrderAsc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := OrderAsc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("OrderAsc() = %v, want %v", got, tt.want)
+				t.Errorf("OrderAsc() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
@@ -288,17 +288,17 @@ func TestOrderAsc(t *testing.T) {
 func TestNewConditionGroup(t *testing.T) {
 	tests := []struct {
 		name  string
-		conds []Condition
-		want  []Condition
+		conds []*Condition
+		want  []*Condition
 	}{
 		// TODO: Add test cases.
 		{
 			name: "test_condition_group",
-			conds: []Condition{
+			conds: []*Condition{
 				nameEqCoder,
 				ageBetweenCond,
 			},
-			want: []Condition{
+			want: []*Condition{
 				nameEqCoder,
 				ageBetweenCond,
 			},
@@ -307,7 +307,7 @@ func TestNewConditionGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewConditionGroup(tt.conds...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewConditionGroup() = %v, want %v", got, tt.want)
+				t.Errorf("NewConditionGroup() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
