@@ -36,8 +36,9 @@ func Or(field string, op string, values ...interface{}) *Condition {
 
 // NewConditionGroup ...
 func NewConditionGroup(conds ...*Condition) (cg []*Condition) {
-	// cg = make([]Condition, len(conds))
-	cg = append(cg, conds...)
+	if len(conds) > 0 {
+		cg = append(cg, conds...)
+	}
 	return
 }
 
@@ -59,12 +60,20 @@ func newOrderCondition(field string, asc bool) *Condition {
 	}
 }
 
-// OrderDesc ...
-func OrderDesc(field string) *Condition {
+// OrderBy new orderby conditions
+func OrderBy(conds ...*Condition) (by []*Condition) {
+	if len(conds) > 0 {
+		by = append(by, conds...)
+	}
+	return
+}
+
+// Desc ...
+func Desc(field string) *Condition {
 	return newOrderCondition(field, false)
 }
 
-// OrderAsc ...
-func OrderAsc(field string) *Condition {
+// Asc ...
+func Asc(field string) *Condition {
 	return newOrderCondition(field, true)
 }

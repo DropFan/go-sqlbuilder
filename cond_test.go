@@ -223,7 +223,7 @@ func Test_newOrderCondition(t *testing.T) {
 	}
 }
 
-func TestOrderDesc(t *testing.T) {
+func TestDesc(t *testing.T) {
 	type args struct {
 		field string
 	}
@@ -247,14 +247,14 @@ func TestOrderDesc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := OrderDesc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
+			if got := Desc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("OrderDesc() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestOrderAsc(t *testing.T) {
+func TestAsc(t *testing.T) {
 	type args struct {
 		field string
 	}
@@ -278,7 +278,7 @@ func TestOrderAsc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := OrderAsc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
+			if got := Asc(tt.args.field); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("OrderAsc() = %#v, want %#v", got, tt.want)
 			}
 		})
@@ -303,11 +303,55 @@ func TestNewConditionGroup(t *testing.T) {
 				ageBetweenCond,
 			},
 		},
+		{
+			name:  "test_condition_group",
+			conds: []*Condition{
+			// nameEqCoder,
+			// ageBetweenCond,
+			},
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewConditionGroup(tt.conds...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewConditionGroup() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOrderBy(t *testing.T) {
+	tests := []struct {
+		name  string
+		conds []*Condition
+		want  []*Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "test1",
+			conds: []*Condition{
+				ageDesc,
+				nameAsc,
+			},
+			want: []*Condition{
+				ageDesc,
+				nameAsc,
+			},
+		},
+		{
+			name:  "test2",
+			conds: []*Condition{
+			// nameAsc,
+			// ageDesc,
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := OrderBy(tt.conds...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("OrderBy() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
