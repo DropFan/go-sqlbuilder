@@ -31,6 +31,8 @@ func (q *Query) String() (str string) {
 	str = strings.Replace(str, " (?)", " ('%v')", -1)
 	// str = strings.Replace(str, ", ?)", ", '%v')", -1)
 	str = strings.Replace(str, ", ?", ", '%v'", -1)
+	str = strings.Replace(str, " ?, ", " '%v', ", -1)
+	str = strings.Replace(str, " ? AS ", " '%v' AS ", -1)
 	// str = strings.Replace(str, ", ? ", ", '%v' ", -1)
 	str = fmt.Sprintf(str, q.Args...)
 	return
