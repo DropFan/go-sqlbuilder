@@ -133,8 +133,8 @@ func TestUpdate(t *testing.T) {
 		q              *Query
 		err            error
 		fvals          = []*FieldValue{
-			&FieldValue{Name: "tag", Value: "test"},
-			&FieldValue{Name: "desc", Value: "just 4 test"},
+			{Name: "tag", Value: "test"},
+			{Name: "desc", Value: "just 4 test"},
 		}
 		fv = NewFV("f", "v")
 		kv = NewKV("k", "v")
