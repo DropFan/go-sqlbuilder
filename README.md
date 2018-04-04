@@ -5,8 +5,24 @@
 [![Coverage Status](https://coveralls.io/repos/github/DropFan/go-sqlbuilder/badge.svg?branch=master)](https://coveralls.io/github/DropFan/go-sqlbuilder?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DropFan/go-sqlbuilder/blob/master/LICENSE)
 
-
 (unfinished) a very simple sql builder for golang.
+
+## TODO
+
+- dialect support for mysql/postgresql/sqlite etc... Only support mysql now. (escape character and placeholder were hard coded)
+  - escape character (mysql:`) (postgres:")
+  - placeholder for params binding (mysql:?) (postgres:$index)
+  - etc...
+- more statement support (group/having/join etc...)
+- more examples (you could find some in test file now)
+- more helpful usages
+- Long-term planning:
+
+    Maybe this package could be a micro ORM？Or add a simple scanner or DAO adapter?
+
+    I have already done a veeeeeery simple and crude demo but it's too simple.
+
+    In general, I hope this package as simple as possible. Waiting for above unitl I have enough free time (long after...).
 
 ## Installation
 
