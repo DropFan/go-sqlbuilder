@@ -20,7 +20,7 @@ const (
 // 	return f.Name
 // }
 
-// operator map: number of operator values
+// operator map: number of operator values. 3 means multi-values.
 var operMap = map[string]int{
 	"=":           1,
 	"!=":          1,

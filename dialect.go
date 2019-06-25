@@ -7,12 +7,13 @@ import (
 
 // Dialector eg: ? for mysql, $index for postgresql
 type Dialector interface {
-	Escape(s string) string
+	Escape(s ...string) string
 	Placeholder(index int) string
+	GetEscapeChar() string
 }
 
 var (
-	mysqlDialector MysqlDialector
+	mysqlDialector    MysqlDialector
 	postgresDialector PostgresqlDialector
 )
 
@@ -22,12 +23,18 @@ type MysqlDialector struct {
 }
 
 // Escape ...
-func (m MysqlDialector) Escape(s string) string {
-	return "`" + strings.Trim(s, "`") + "`"
+func (MysqlDialector) Escape(s ...string) string {
+	str := strings.Join(s, "`, `")
+	return "`" + strings.Trim(str, "`") + "`"
+}
+
+// GetEscapeChar ...
+func (MysqlDialector) GetEscapeChar() string {
+	return "`"
 }
 
 // Placeholder ...
-func (m MysqlDialector) Placeholder(index int) string {
+func (MysqlDialector) Placeholder(index int) string {
 	return "?"
 }
 
@@ -37,8 +44,14 @@ type PostgresqlDialector struct {
 }
 
 // Escape ...
-func (p PostgresqlDialector) Escape(s string) string {
-	return "\"" + strings.Trim(s, "\"") + "\""
+func (p PostgresqlDialector) Escape(s ...string) string {
+	str := strings.Join(s, `", "`)
+	return `"` + strings.Trim(str, `"`) + `"`
+}
+
+// GetEscapeChar ...
+func (p PostgresqlDialector) GetEscapeChar() string {
+	return `"`
 }
 
 // Placeholder ...

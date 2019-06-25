@@ -10,11 +10,11 @@
 ## TODO
 
 - dialect support for mysql/postgresql/sqlite etc... Only support mysql now. (escape character and placeholder were hard coded)
-  - escape character (mysql:`) (postgres:")
+  - (done) escape character (mysql:`) (postgres:") [✔️]
   - placeholder for params binding (mysql:?) (postgres:$index)
   - etc...
 - more statement support (group/having/join etc...)
-- more examples (you could find some in test file now)
+- more examples (you could find some examples in test file now)
 - more helpful usages
 - Long-term planning:
 

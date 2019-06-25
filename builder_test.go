@@ -139,8 +139,6 @@ func TestUpdate(t *testing.T) {
 		fv = NewFV("f", "v")
 		kv = NewKV("k", "v")
 	)
-	AndSexEqFemale := sexEqFemale
-	AndSexEqFemale.AndOr = true
 
 	want = "UPDATE `user` SET `k` = ?, `f` = ?, `some_field` = ?, `tag` = ?, `desc` = ? WHERE `name` = ? AND `sex` = ? ORDER BY `age` DESC, `name` ASC LIMIT 100"
 	wantArgs = []interface{}{kv.Value, fv.Value, "some_value", "test", "just 4 test", "coder", "female"}
@@ -170,8 +168,6 @@ func TestDelete(t *testing.T) {
 		q              *Query
 		err            error
 	)
-	AndSexEqFemale := sexEqFemale
-	AndSexEqFemale.AndOr = true
 
 	want = "DELETE FROM `user` WHERE `name` = ? AND `sex` = ? /*===*/  OR (`sex` = ? AND `name` IN (?, ?)) ORDER BY `age` DESC, `name` ASC LIMIT 0, 100"
 	wantArgs = []interface{}{"coder", "female", "female", "coder", "hacker"}
@@ -358,6 +354,111 @@ func TestRawBuild(t *testing.T) {
 	if !reflect.DeepEqual(wantArgs, args) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
+	lastQueries := b.LastQueries()
+	lastQuery := lastQueries[len(lastQueries)-1]
+	if lastQuery.Query != got {
+		t.Errorf("\ngot:\n%s\nlast query:\n%s\n", got, lastQuery.Query)
+	}
+}
+
+func TestSetDialector(t *testing.T) {
+	var (
+		got, want      string
+		args, wantArgs []interface{}
+		err            error
+		q              *Query
+	)
+	t.Logf("default escape char:[%v]", b.EscapeChar())
+	b.SetDialector(postgresDialector)
+	t.Logf("postgres escape char:[%v]", b.EscapeChar())
+	b.SetDialector(mysqlDialector)
+	t.Logf("mysql escape char:[%v]", b.EscapeChar())
+
+	want = `SELECT * FROM "user" WHERE 1 AND ("name" = ? OR "sex" = ?)`
+	wantArgs = []interface{}{"coder", "female"}
+	b.SetDialector(postgresDialector)
+
+	b.Select("*").From("user").Where().And(nameEqCoder, sexEqFemale)
+	q, err = b.Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+	b.SetDialector(mysqlDialector)
+}
+
+func TestCount(t *testing.T) {
+	var (
+		got, want      string
+		args, wantArgs []interface{}
+		err            error
+		q              *Query
+	)
+	q, err = b.Clear().Build()
+	if err == nil || err.Error() != "empty build" {
+		t.Errorf("unexcept error: %#v, q=%#v", err, q)
+	}
+	want = "SELECT"
+	q, err = b.Select().From().Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
+	want = "SELECT * FROM `table` WHERE `f` = ?"
+	wantArgs = []interface{}{"v"}
+	b.Raw("SELECT * FROM `table` WHERE `f` = ?", "v")
+	q, err = b.Build("show tables")
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
+	want = "SELECT COUNT(/*test query*/) FROM `users` WHERE `age` = ?"
+	wantArgs = []interface{}{"18"}
+
+	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
+	want = "SELECT COUNT(1) FROM `users` WHERE `age` = ?"
+	wantArgs = []interface{}{"18"}
+
+	q, err = b.Count().From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
 	lastQueries := b.LastQueries()
 	lastQuery := lastQueries[len(lastQueries)-1]
 	if lastQuery.Query != got {

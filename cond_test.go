@@ -28,6 +28,12 @@ var (
 		Operator: "=",
 		Values:   []interface{}{"female"},
 	}
+	AndSexEqFemale = &Condition{
+		AndOr:    true,
+		Field:    "sex",
+		Values:   []interface{}{"female"},
+		Operator: "=",
+	}
 	ageBetweenCond = &Condition{
 		Field:    "age",
 		Operator: "BETWEEN",
@@ -306,8 +312,8 @@ func TestNewConditionGroup(t *testing.T) {
 		{
 			name:  "test_condition_group",
 			conds: []*Condition{
-			// nameEqCoder,
-			// ageBetweenCond,
+				// nameEqCoder,
+				// ageBetweenCond,
 			},
 			want: nil,
 		},
@@ -342,8 +348,8 @@ func TestOrderBy(t *testing.T) {
 		{
 			name:  "test2",
 			conds: []*Condition{
-			// nameAsc,
-			// ageDesc,
+				// nameAsc,
+				// ageDesc,
 			},
 			want: nil,
 		},
