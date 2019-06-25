@@ -327,6 +327,19 @@ func TestRawBuild(t *testing.T) {
 		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
 	}
 
+	want = "SELECT COUNT(/*test query*/) FROM `users` WHERE `age` = ?"
+	wantArgs = []interface{}{"18"}
+
+	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build(18)
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
 	want = "/* just a comment */ SELECT * FROM `tablename` WHERE `name` = ?"
 	wantArgs = []interface{}{"yourname"}
 	b.Select("something").From("world").Clear().Select("*").From("tablename").Append(" WHERE `name` = ?", "yourname").AppendPre("/* just a comment */ ")

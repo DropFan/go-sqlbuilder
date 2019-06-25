@@ -10,6 +10,7 @@ import (
 // Builder ...
 type Builder struct {
 	sqlType     SQLType
+	dialector   Dialector
 	queryTables string // abandoned
 	queryArgs   []interface{}
 	query       string
@@ -22,10 +23,17 @@ type Builder struct {
 	lastQueries []*Query
 }
 
+// SetDialector set dialector for params binding placeholder and escape charcter
+func (b *Builder) SetDialector(d Dialector) *Builder {
+	b.dialector = d
+	return b
+}
+
 // New builder
 func New() *Builder {
 	return &Builder{
 		sqlType:     0,
+		dialector:   mysqlDialector,
 		queryTables: "",
 		queryArgs:   []interface{}{},
 		query:       "",
@@ -385,5 +393,19 @@ func (b *Builder) Limit(limitOffset ...int) *Builder {
 			strconv.Itoa(limitOffset[1])
 	}
 	// b.queryArgs = append(b.queryArgs, offset, limit)
+	return b
+}
+
+// Count ...
+func (b *Builder) Count(query ...string) *Builder {
+	b.renew(SelectSQL)
+	b.query = "SELECT COUNT("
+	if len(query) <= 0 {
+		b.query += "1"
+	} else {
+		b.query += strings.TrimSpace(strings.Join(query, " "))
+	}
+	b.query += ")"
+
 	return b
 }
