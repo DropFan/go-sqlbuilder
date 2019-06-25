@@ -330,7 +330,7 @@ func TestRawBuild(t *testing.T) {
 	want = "SELECT COUNT(/*test query*/) FROM `users` WHERE `age` = ?"
 	wantArgs = []interface{}{"18"}
 
-	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build(18)
+	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build()
 	got = q.Query
 	args = q.Args
 	if err != nil {
