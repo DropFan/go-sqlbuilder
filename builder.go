@@ -29,6 +29,16 @@ func (b *Builder) SetDialector(d Dialector) *Builder {
 	return b
 }
 
+// Escape escape fields.
+func (b *Builder) Escape(s ...string) string {
+	return b.dialector.Escape(s...)
+}
+
+// EscapeChar ...
+func (b *Builder) EscapeChar() string {
+	return b.dialector.GetEscapeChar()
+}
+
 // New builder
 func New() *Builder {
 	return &Builder{
@@ -111,7 +121,8 @@ func (b *Builder) Select(fields ...string) *Builder {
 	} else if fields[0] == "*" {
 		b.query += " *"
 	} else {
-		b.query += " `" + strings.Join(fields, "`, `") + "`"
+		b.query += " " + b.Escape(fields...)
+		// b.query += " `" + strings.Join(fields, "`, `") + "`"
 	}
 
 	return b
@@ -120,7 +131,7 @@ func (b *Builder) Select(fields ...string) *Builder {
 // Insert ...
 func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
-	b.query = "INSERT INTO `" + tableName + "`"
+	b.query = "INSERT INTO " + b.Escape(tableName)
 
 	if len(fields) > 0 {
 		b.Into(fields...)
@@ -131,7 +142,7 @@ func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 // Replace ...
 func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
-	b.query = "REPLACE INTO `" + tableName + "`"
+	b.query = "REPLACE INTO " + b.Escape(tableName)
 
 	if len(fields) > 0 {
 		b.Into(fields...)
@@ -141,7 +152,8 @@ func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 
 // Into ... for insert or replace
 func (b *Builder) Into(fields ...string) *Builder {
-	b.query += " (`" + strings.Join(fields, "`, `") + "`)"
+	b.query += " (" + b.Escape(fields...) + ")"
+	// b.query += " (`" + strings.Join(fields, "`, `") + "`)"
 	return b
 }
 
@@ -162,7 +174,7 @@ func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 // Update ...
 func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(UpdateSQL)
-	b.query = "UPDATE `" + tableName + "` SET "
+	b.query = "UPDATE " + b.Escape(tableName) + " SET "
 
 	if len(fvals) > 0 {
 		b.Set(fvals...)
@@ -180,7 +192,7 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 			b.query += ", "
 		}
 		b.setValues = append(b.setValues, fval.Name)
-		b.query += "`" + fval.Name + "` = ?"
+		b.query += b.Escape(fval.Name) + " = ?"
 		b.queryArgs = append(b.queryArgs, fval.Value)
 	}
 
@@ -190,7 +202,7 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 // Delete ...
 func (b *Builder) Delete(tableName string) *Builder {
 	b.renew(DeleteSQL)
-	b.query = "DELETE FROM `" + tableName + "`"
+	b.query = "DELETE FROM " + b.Escape(tableName)
 
 	return b
 }
@@ -223,7 +235,8 @@ func (b *Builder) From(tables ...string) *Builder {
 	}
 	// b.Tables = tables
 	// b.QueryTables = "`" + strings.Join(tables, "`, `") + "`"
-	b.query += " FROM `" + strings.Join(tables, "`, `") + "`"
+	b.query += " FROM " + b.Escape(tables...)
+	// b.query += " FROM `" + strings.Join(tables, "`, `") + "`"
 	return b
 }
 
@@ -354,7 +367,8 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 	}
 
 	queryArgs = append(queryArgs, cond.Values...)
-	str += "`" + cond.Field + "` " + cond.Operator + " " + placeholders
+
+	str += b.Escape(cond.Field) + " " + cond.Operator + " " + placeholders
 
 	return
 }
@@ -367,7 +381,7 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 	condStrSlice := []string{}
 
 	for _, cond := range conditions {
-		condStr := "`" + cond.Field + "`"
+		condStr := b.Escape(cond.Field)
 		if cond.Asc {
 			condStr += " ASC"
 		} else {
