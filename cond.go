@@ -34,7 +34,9 @@ func Or(field string, op string, values ...interface{}) *Condition {
 	return newCondition(false, field, op, values)
 }
 
-// NewConditionGroup ...
+// NewConditionGroup reutrn condition group
+//
+// @Warning: don't mix `OrderBy` and `Where` conditions...
 func NewConditionGroup(conds ...*Condition) (cg []*Condition) {
 	if len(conds) > 0 {
 		cg = append(cg, conds...)
@@ -68,12 +70,12 @@ func OrderBy(conds ...*Condition) (by []*Condition) {
 	return
 }
 
-// Desc ...
+// Desc return `OrderBy` condition with descending order by `field`
 func Desc(field string) *Condition {
 	return newOrderCondition(field, false)
 }
 
-// Asc ...
+// Asc return `OrderBy` condition with ascending order by `field`
 func Asc(field string) *Condition {
 	return newOrderCondition(field, true)
 }

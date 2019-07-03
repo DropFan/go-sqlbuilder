@@ -51,6 +51,43 @@ var (
 	}
 )
 
+func TestBuilder(t *testing.T) {
+	var (
+		got, want      string
+		args, wantArgs []interface{}
+		err            error
+		q              *Query
+	)
+
+	q = b.LastQuery()
+	if q != nil {
+		t.Errorf("unexpected error")
+	}
+
+	want = "SELECT * FROM `user` WHERE `user_id` = ?"
+	wantArgs = []interface{}{1}
+	b.Select("*").FromRaw("`user`").WhereRaw("`user_id` = ?", 1)
+	q, err = b.Build("show tables")
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
+	// lastQueries := b.LastQueries()
+	// lastQuery := lastQueries[len(lastQueries)-1]
+	lastQuery := b.LastQuery()
+	if lastQuery.Query != got {
+		t.Errorf("\ngot:\n%s\nlast query:\n%s\n", got, lastQuery.Query)
+	}
+}
+
 func TestSelect(t *testing.T) {
 	var (
 		got, want      string
@@ -83,14 +120,14 @@ func TestSelect(t *testing.T) {
 	if !reflect.DeepEqual(wantArgs, args) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
-	want = "SELECT `id`, `name`, `age`, `sex`, `birthday` FROM `user` WHERE [error: Invalid operator:(operator:![field:test])] AND `name` IN (?, ?) OR `sex` = ? OR `name` = ? AND [error: Invalid number of values with operator:(=[field:test_field])] ORDER BY `age` DESC, `name` ASC LIMIT 100 LIMIT 0, 100"
+	want = "SELECT `id`, `name`, `age`, `sex`, `birthday` FROM `user` WHERE {error: Invalid operator:(operator:![field:test])} AND `name` IN (?, ?) OR `sex` = ? OR `name` = ? AND {error: Invalid number of values with operator:(=[field:test_field])} ORDER BY `age` DESC, `name` ASC LIMIT 100 LIMIT 0, 100"
 	wantArgs = []interface{}{"coder", "hacker", "female", "coder"}
 	b.Select(d.Fields()...).
 		From("user").
 		Where([]*Condition{errOpCond, nameInNames, sexEqFemale}...).
 		Or(nameEqCoder).And(errValNumCond).
 		Or().
-		OrderBy(ageDesc, nameAsc).Limit(100).Limit(0, 100)
+		OrderBy(ageDesc, nameAsc, nil).Limit(100).Limit(0, 100)
 	q, err = b.Build()
 	got = q.Query
 	args = q.Args
@@ -145,6 +182,26 @@ func TestUpdate(t *testing.T) {
 	b.Update("user", kv).Set(fv).Append(", `some_field` = ?", "some_value").Set(fvals...)
 
 	b.Where(nameEqCoder, AndSexEqFemale).OrderBy(ageDesc, nameAsc).Limit(100)
+	q, err = b.Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("update error:%s", err)
+	}
+
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
+	//
+	want = "UPDATE `user` SET `k` = ?, `f` = ?, `some_field` = ?, `tag` = ?, `desc` = ? WHERE `name` = ? AND `sex` = ?"
+	wantArgs = []interface{}{kv.Value, fv.Value, "some_value", "test", "just 4 test", "coder", "female"}
+	b.Update("user", kv).Set(fv, nil).Append(", `some_field` = ?", "some_value").Set(fvals...)
+
+	b.Where(nameEqCoder, AndSexEqFemale)
 	q, err = b.Build()
 	got = q.Query
 	args = q.Args
@@ -252,10 +309,11 @@ func TestReplace(t *testing.T) {
 
 	want = "REPLACE INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)"
 	vals := []interface{}{1, "coder", 25, "male", "2000/09/01"}
+	vals2 := []interface{}{2, "coder2", 25, "female", "2001/09/01"}
 	valsGroup := [][]interface{}{vals}
 	b.Replace(d.TableName(), d.Fields()...).
 		Values(valsGroup...).
-		Append(", (?, ?, ?, ?, ?)", vals...)
+		Append(", (?, ?, ?, ?, ?)", vals2...)
 	q, err = b.Build()
 	got = q.Query
 	args = q.Args
@@ -263,7 +321,7 @@ func TestReplace(t *testing.T) {
 		t.Errorf("replace error:%s", err)
 	}
 
-	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", 1, "coder", 25, "male", "2000/09/01"}
+	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", 2, "coder2", 25, "female", "2001/09/01"}
 
 	if want != got {
 		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
@@ -311,6 +369,22 @@ func TestRawBuild(t *testing.T) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
 
+	want = "SELECT * FROM `table` WHERE `f` = ?"
+	wantArgs = []interface{}{"v"}
+	b.Select("*").From("table").WhereRaw("`f` = ?", wantArgs[0])
+	q, err = b.Build("show tables")
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
 	want = "show tables"
 	// showTables := NewQuery("show tables", "")
 	q, err = b.Raw("show tables").Build()
@@ -326,7 +400,7 @@ func TestRawBuild(t *testing.T) {
 	want = "SELECT COUNT(/*test query*/) FROM `users` WHERE `age` = ?"
 	wantArgs = []interface{}{"18"}
 
-	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18})).Build()
+	q, err = b.Count("/*test query*/").From("users").Where(newCondition(true, "age", "=", []interface{}{18}), nil).Build()
 	got = q.Query
 	args = q.Args
 	if err != nil {

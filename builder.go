@@ -7,7 +7,9 @@ import (
 	"strings"
 )
 
-// Builder ...
+// Builder :You'd better create a new builder with `New()` function
+//
+// You can found some examples in `builder_test.go`
 type Builder struct {
 	sqlType     SQLType
 	dialector   Dialector
@@ -29,17 +31,18 @@ func (b *Builder) SetDialector(d Dialector) *Builder {
 	return b
 }
 
-// Escape escape fields.
+// Escape escape fields
 func (b *Builder) Escape(s ...string) string {
 	return b.dialector.Escape(s...)
 }
 
-// EscapeChar ...
+// EscapeChar return escape char
 func (b *Builder) EscapeChar() string {
 	return b.dialector.GetEscapeChar()
 }
 
 // New builder
+// You can found some examples in `builder_test.go`
 func New() *Builder {
 	return &Builder{
 		sqlType:     0,
@@ -62,6 +65,16 @@ func (b *Builder) LastQueries() []*Query {
 	return b.lastQueries
 }
 
+// LastQuery return last query
+func (b *Builder) LastQuery() *Query {
+	if len(b.lastQueries) == 0 {
+		return nil
+	}
+
+	return b.lastQueries[len(b.lastQueries)-1]
+}
+
+// renew reset some data after `Build()` was called
 func (b *Builder) renew(st SQLType) {
 	b.ErrList = []error{}
 	b.sqlType = st
@@ -188,6 +201,9 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 	// b.setValue = ""
 
 	for i, fval := range fvals {
+		if fval == nil {
+			continue
+		}
 		if i > 0 || len(b.setValues) > 0 {
 			b.query += ", "
 		}
@@ -240,13 +256,22 @@ func (b *Builder) From(tables ...string) *Builder {
 	return b
 }
 
+// FromRaw ...
+func (b *Builder) FromRaw(from string) *Builder {
+	b.query += " FROM " + from
+	return b
+}
+
 // Where ...
 func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 	condSlice := []string{}
 	for i, cond := range conditions {
+		if cond == nil {
+			continue
+		}
 		condStr, args, err := b.buildCondition(cond)
 		if err != nil {
-			condStr = fmt.Sprintf("[error: %s]", err)
+			condStr = fmt.Sprintf("{error: %s}", err)
 			b.ErrList = append(b.ErrList, err)
 		}
 		if cond.AndOr && i > 0 {
@@ -324,6 +349,15 @@ func (b *Builder) Where(conditions ...*Condition) *Builder {
 	return b
 }
 
+// WhereRaw ...
+func (b *Builder) WhereRaw(str string, args ...interface{}) *Builder {
+	b.query += " WHERE "
+	b.query += str
+	b.queryArgs = append(b.queryArgs, args...)
+
+	return b
+}
+
 // BuildWhere ...
 func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []interface{}, err error) {
 	str = ""
@@ -381,6 +415,9 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 	condStrSlice := []string{}
 
 	for _, cond := range conditions {
+		if cond == nil {
+			continue
+		}
 		condStr := b.Escape(cond.Field)
 		if cond.Asc {
 			condStr += " ASC"
