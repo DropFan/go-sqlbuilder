@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,6 +22,7 @@ type Builder struct {
 	limit       string   // abandoned
 	ErrList     []error
 	lastQueries []*Query
+	// placeholder
 }
 
 // SetDialector set dialector for params binding placeholder and escape charcter
@@ -40,6 +40,11 @@ func (b *Builder) Escape(s ...string) string {
 func (b *Builder) EscapeChar() string {
 	return b.dialector.GetEscapeChar()
 }
+
+// Placeholder ...
+// func (b *Builder) Placeholder(index int) string {
+// 	return b.dialector.Placeholder(index)
+// }
 
 // New builder
 // You can found some examples in `builder_test.go`
@@ -173,10 +178,21 @@ func (b *Builder) Into(fields ...string) *Builder {
 // Values ...
 func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 	b.query += " VALUES "
+	// index := 0
 	for i, vals := range valsGroup {
 		if i > 0 {
 			b.query += ", "
 		}
+		// b.query += "("
+		// for j, val := range vals {
+		// 	index++
+		// 	if j > 0 {
+		// 		b.query += ", "
+		// 	}
+		// 	b.query += b.Placeholder(index)
+		// 	b.queryArgs = append(b.queryArgs, val)
+		// }
+		// b.query += ")"
 
 		b.query += "(?" + strings.Repeat(", ?", len(vals)-1) + ")"
 		b.queryArgs = append(b.queryArgs, vals...)
@@ -233,10 +249,10 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	case DeleteSQL:
 	case RawSQL:
 	default:
-		return nil, errors.New("empty build")
+		return nil, ErrEmptySQLType
 	}
 	if len(b.ErrList) > 0 {
-		err = errors.New("There are some errors in sql")
+		err = ErrListIsNotEmpty
 	}
 	q = NewQuery(b.query, b.queryArgs...)
 	b.lastQueries = append(b.lastQueries, q)
@@ -337,6 +353,30 @@ func (b *Builder) Or(conditions ...*Condition) *Builder {
 	return b
 }
 
+// In ...
+func (b *Builder) In(field string, values ...interface{}) *Builder {
+	b.addConditions(In(field, values...))
+	return b
+}
+
+// NotIn ...
+func (b *Builder) NotIn(field string, values ...interface{}) *Builder {
+	b.addConditions(NotIn(field, values...))
+	return b
+}
+
+// Between ...
+func (b *Builder) Between(field string, values ...interface{}) *Builder {
+	b.addConditions(Between(field, values...))
+	return b
+}
+
+// NotBetween ...
+func (b *Builder) NotBetween(field string, values ...interface{}) *Builder {
+	b.addConditions(NotBetween(field, values...))
+	return b
+}
+
 // Where ...
 func (b *Builder) Where(conditions ...*Condition) *Builder {
 	b.query += " WHERE "
@@ -360,6 +400,10 @@ func (b *Builder) WhereRaw(str string, args ...interface{}) *Builder {
 
 // BuildWhere ...
 func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []interface{}, err error) {
+	// if cond == nil {
+	// 	return "", nil, ErrEmptyCondition
+	// }
+
 	str = ""
 	queryArgs = []interface{}{}
 
@@ -367,10 +411,17 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 		// return "", queryArgs,
 		err = fmt.Errorf("Invalid operator:(operator:%s[field:%s])", cond.Operator, cond.Field)
 		return
-	} else if len(cond.Values) != opValue && opValue != 3 {
-		// return "", queryArgs,
-		err = fmt.Errorf("Invalid number of values with operator:(%s[field:%s])", cond.Operator, cond.Field)
-		return
+	} else if len(cond.Values) != opValue {
+		switch opValue {
+		case 3:
+			if len(cond.Values) != 0 {
+				break
+			}
+			fallthrough
+		case 1, 2:
+			err = fmt.Errorf("Invalid number of values with operator:(%s[field:%s])", cond.Operator, cond.Field)
+			return
+		}
 	}
 	// "=":           1,
 	// "!=":          1,

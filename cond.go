@@ -24,14 +24,34 @@ func newCondition(andOr bool, field string, op string, values []interface{}) *Co
 	}
 }
 
-// And return and condition
+// And return "and" condition
 func And(field string, op string, values ...interface{}) *Condition {
 	return newCondition(true, field, op, values)
 }
 
-// Or return or condition
+// Or return "or" condition
 func Or(field string, op string, values ...interface{}) *Condition {
 	return newCondition(false, field, op, values)
+}
+
+// Between return "and `field` between" condition
+func Between(field string, values ...interface{}) *Condition {
+	return newCondition(false, field, "BETWEEN", values)
+}
+
+// NotBetween return "and `field` not between" condition
+func NotBetween(field string, values ...interface{}) *Condition {
+	return newCondition(false, field, "NOT BETWEEN", values)
+}
+
+// In return "and `field` in" condition
+func In(field string, values ...interface{}) *Condition {
+	return newCondition(false, field, "IN", values)
+}
+
+// NotIn return "and `field` not in" condition
+func NotIn(field string, values ...interface{}) *Condition {
+	return newCondition(false, field, "NOT IN", values)
 }
 
 // NewConditionGroup reutrn condition group

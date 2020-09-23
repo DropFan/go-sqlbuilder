@@ -186,6 +186,142 @@ func TestOr(t *testing.T) {
 	}
 }
 
+func TestIn(t *testing.T) {
+	type args struct {
+		field  string
+		values []interface{}
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "in",
+			args: args{
+				field:  "name",
+				values: []interface{}{"coder", "hacker"},
+			},
+			want: &Condition{
+				Field:    "name",
+				Operator: "IN",
+				Values:   []interface{}{"coder", "hacker"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := In(tt.args.field, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("In() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotIn(t *testing.T) {
+	type args struct {
+		field  string
+		values []interface{}
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "not in",
+			args: args{
+				field:  "name",
+				values: []interface{}{"coder", "hacker"},
+			},
+			want: &Condition{
+				Field:    "name",
+				Operator: "NOT IN",
+				Values:   []interface{}{"coder", "hacker"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := NotIn(tt.args.field, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("NotIn() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestBetween(t *testing.T) {
+	type args struct {
+		field  string
+		values []interface{}
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "between",
+			args: args{
+				field:  "age",
+				values: []interface{}{12, 36},
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: "BETWEEN",
+				Values:   []interface{}{12, 36},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Between(tt.args.field, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Between() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotBetween(t *testing.T) {
+	type args struct {
+		field  string
+		values []interface{}
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		// TODO: Add test cases.
+		{
+			name: "not between",
+			args: args{
+				field:  "age",
+				values: []interface{}{12, 36},
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: "NOT BETWEEN",
+				Values:   []interface{}{12, 36},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := NotBetween(tt.args.field, tt.args.values...); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("NotBetween() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
 func Test_newOrderCondition(t *testing.T) {
 	type args struct {
 		field string

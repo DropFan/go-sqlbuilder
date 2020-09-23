@@ -86,6 +86,7 @@ func TestBuilder(t *testing.T) {
 	if lastQuery.Query != got {
 		t.Errorf("\ngot:\n%s\nlast query:\n%s\n", got, lastQuery.Query)
 	}
+
 }
 
 func TestSelect(t *testing.T) {
@@ -161,6 +162,52 @@ func TestSelect(t *testing.T) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
 
+	want = "SELECT * FROM `user` WHERE `age` IN (?, ?, ?) AND `city_id` IN (?, ?, ?)"
+	inCityIDs := &Condition{
+		Field:    "city_id",
+		Operator: "IN",
+		Values:   []interface{}{1, 2, 3},
+	}
+	wantArgs = []interface{}{1, 2, 3}
+	wantArgs = append(wantArgs, []interface{}{1, 2, 3}...)
+	b.Select("*").From("user").Where(In("age", []interface{}{1, 2, 3}...)).And(inCityIDs).NotIn("a", 1, 2, 3).Between("b", 1, 5).NotBetween("c", 2, 3)
+	b.Select("*").From("user").Where(In("age", []interface{}{1, 2, 3}...)).Append(" AND ").In("city_id", 1, 2, 3)
+	q, err = b.Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+	if want != got {
+		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
+	want = "SELECT * FROM `user` WHERE {error: Invalid number of values with operator:(IN[field:city_id])}"
+	inCityIDs = &Condition{
+		Field:    "city_id",
+		Operator: "IN",
+		// Values:   []interface{}{1, 2, 3},
+	}
+	wantArgs = []interface{}{}
+	b.Select("*").From("user").Where(inCityIDs)
+	q, err = b.Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Logf("expected error: %s\nsql:%v", err, got)
+	}
+
+	q, err = b.Select("*").From("user").Where(nil).Build()
+	got = q.Query
+	args = q.Args
+	if err != nil {
+		t.Logf("expected error: %s", err)
+	}
+	t.Logf("expected nil error: %v\nsql:%v", err, got)
 }
 
 func TestUpdate(t *testing.T) {
@@ -339,7 +386,7 @@ func TestRawBuild(t *testing.T) {
 		q              *Query
 	)
 	q, err = b.Clear().Build()
-	if err == nil || err.Error() != "empty build" {
+	if err == nil || err != ErrEmptySQLType {
 		t.Errorf("unexcept error: %#v, q=%#v", err, q)
 	}
 	want = "SELECT"
@@ -477,7 +524,7 @@ func TestCount(t *testing.T) {
 		q              *Query
 	)
 	q, err = b.Clear().Build()
-	if err == nil || err.Error() != "empty build" {
+	if err == nil || err != ErrEmptySQLType {
 		t.Errorf("unexcept error: %#v, q=%#v", err, q)
 	}
 	want = "SELECT"
