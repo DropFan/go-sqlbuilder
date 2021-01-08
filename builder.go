@@ -157,6 +157,28 @@ func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 	return b
 }
 
+// InsertOrUpdate ...
+func (b *Builder) InsertOrUpdate(tableName string, fvals ...*FieldValue) *Builder {
+	b.renew(InsertSQL)
+	b.query = "INSERT INTO " + b.Escape(tableName)
+
+	if len(fvals) > 0 {
+		var (
+			fields []string
+			vals   []interface{}
+		)
+		for _, fv := range fvals {
+			if fv != nil {
+				fields = append(fields, fv.Name)
+				vals = append(vals, fv.Value)
+			}
+		}
+		b.Into(fields...).Values(vals).Append(" ON DUPLICATE KEY UPDATE ").Set(fvals...)
+	}
+
+	return b
+}
+
 // Replace ...
 func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
@@ -245,6 +267,7 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	switch b.sqlType {
 	case SelectSQL:
 	case InsertSQL:
+	case InsertOrUpdateSQL:
 	case UpdateSQL:
 	case DeleteSQL:
 	case RawSQL:

@@ -198,7 +198,7 @@ func TestSelect(t *testing.T) {
 	got = q.Query
 	args = q.Args
 	if err != nil {
-		t.Logf("expected error: %s\nsql:%v", err, got)
+		t.Logf("\nexpected error: %s\nsql:%v", err, got)
 	}
 
 	q, err = b.Select("*").From("user").Where(nil).Build()
@@ -207,7 +207,7 @@ func TestSelect(t *testing.T) {
 	if err != nil {
 		t.Logf("expected error: %s", err)
 	}
-	t.Logf("expected nil error: %v\nsql:%v", err, got)
+	t.Logf("\nexpected nil error: %v\nsql:%v", err, got)
 }
 
 func TestUpdate(t *testing.T) {
@@ -340,6 +340,34 @@ func TestInsert(t *testing.T) {
 
 	if want != got {
 		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)
+	}
+	if !reflect.DeepEqual(wantArgs, args) {
+		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
+	}
+
+	want = "INSERT INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `id` = ?, `name` = ?, `age` = ?, `sex` = ?, `birthday` = ?"
+	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", 1, "coder", 25, "male", "2000/09/01"}
+	vals = []interface{}{1, "coder", 25, "male", "2000/09/01"}
+	valsGroup = [][]interface{}{vals, vals}
+	fvals := []*FieldValue{
+		NewFV("id", 1),
+		NewFV("name", "coder"),
+		NewFV("age", 25),
+		NewFV("sex", "male"),
+		NewFV("birthday", "2000/09/01"),
+	}
+	b.InsertOrUpdate(d.TableName(), fvals...)
+
+	q, err = b.Build()
+	got = q.Query
+	args = q.Args
+
+	if err != nil {
+		t.Errorf("insert or update error:%s", err)
+	}
+
+	if want != got {
+		t.Errorf("\ngot:\n{%s}\nwant:\n{%s}\n", got, want)
 	}
 	if !reflect.DeepEqual(wantArgs, args) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
