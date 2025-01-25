@@ -1,6 +1,6 @@
 # go-sqlbuilder
 
-[![Build Status](https://travis-ci.org/DropFan/go-sqlbuilder.svg?branch=master)](https://travis-ci.org/DropFan/go-sqlbuilder)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/DropFan/go-sqlbuilder/go.yml?branch=master)](https://github.com/DropFan/go-sqlbuilder/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/DropFan/go-sqlbuilder)](https://goreportcard.com/report/github.com/DropFan/go-sqlbuilder)
 [![Coverage Status](https://coveralls.io/repos/github/DropFan/go-sqlbuilder/badge.svg?branch=master)](https://coveralls.io/github/DropFan/go-sqlbuilder?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DropFan/go-sqlbuilder/blob/master/LICENSE)
