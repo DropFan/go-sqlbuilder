@@ -1,3 +1,17 @@
+// Package builder provides a fluent SQL query builder with support for multiple SQL dialects.
+// It offers a clean and intuitive API for constructing SQL queries programmatically while
+// handling proper escaping and parameter binding based on the target database system.
+//
+// The package supports multiple SQL dialects including MySQL, PostgreSQL, and SQLite,
+// with appropriate escaping and placeholder styles for each. It provides a type-safe
+// way to build complex SQL queries without string concatenation or manual escaping.
+//
+// Example usage:
+//
+//	b := builder.New()
+//	query, err := b.Select("id", "name").From("users").Where(builder.Eq("status", "active")).Build()
+//
+// For more examples, see the builder_test.go file.
 package builder
 
 import (
@@ -6,48 +20,64 @@ import (
 	"strings"
 )
 
-// Builder :You'd better create a new builder with `New()` function
+// Builder represents a SQL query builder that supports multiple SQL dialects.
+// It provides a fluent interface for constructing SQL queries with proper escaping
+// and parameter binding.
 //
-// You can found some examples in `builder_test.go`
+// It is recommended to create a new Builder instance using the New() function.
+// For usage examples, please refer to builder_test.go.
 type Builder struct {
-	sqlType     SQLType
-	dialector   Dialector
-	queryTables string // abandoned
-	queryArgs   []interface{}
-	query       string
-	from        string // abandoned
-	setValues   []string
+	// sqlType represents the type of SQL query being built (SELECT, INSERT, etc.)
+	sqlType SQLType
+	// dialector handles database-specific SQL syntax and escaping rules
+	dialector Dialector
+	// queryArgs holds the arguments for parameter binding in the query
+	queryArgs []interface{}
+	// query stores the current SQL query string being constructed
+	query string
+	// setValues stores the field names being updated in an UPDATE query
+	setValues []string
+	// ErrList collects any errors encountered during query construction
+	ErrList []error
+	// lastQueries maintains a history of all queries built by this instance
+	lastQueries []*Query
+	// The following fields are deprecated and will be removed in a future version:
+	queryTables string   // abandoned
+	from        string   // abandoned
 	where       []string // abandoned
 	orderBy     string   // abandoned
 	limit       string   // abandoned
-	ErrList     []error
-	lastQueries []*Query
-	// placeholder
 }
 
-// SetDialector set dialector for params binding placeholder and escape charcter
+// SetDialector sets the SQL dialect for parameter binding placeholders and identifier escaping.
+// It returns the Builder instance for method chaining.
 func (b *Builder) SetDialector(d Dialector) *Builder {
 	b.dialector = d
 	return b
 }
 
-// Escape escape fields
+// Escape escapes the provided field names according to the current SQL dialect's rules.
+// It returns the escaped string representation of the fields.
 func (b *Builder) Escape(s ...string) string {
 	return b.dialector.Escape(s...)
 }
 
-// EscapeChar return escape char
+// EscapeChar returns the escape character used by the current SQL dialect
+// for escaping identifiers.
 func (b *Builder) EscapeChar() string {
 	return b.dialector.GetEscapeChar()
 }
 
-// Placeholder ...
+// Placeholder returns the appropriate parameter placeholder for the current SQL dialect
+// at the given position. For example, MySQL uses "?" while PostgreSQL uses "$1", "$2", etc.
+//
+// This method is currently disabled as the placeholder handling is done internally.
 // func (b *Builder) Placeholder(index int) string {
 // 	return b.dialector.Placeholder(index)
 // }
 
-// New builder
-// You can found some examples in `builder_test.go`
+// New creates and initializes a new Builder instance with default MySQL dialect.
+// For usage examples, please refer to builder_test.go.
 func New() *Builder {
 	return &Builder{
 		sqlType:     0,
@@ -65,12 +95,12 @@ func New() *Builder {
 	}
 }
 
-// LastQueries return last queries
+// LastQueries returns all previously built queries in this builder instance.
 func (b *Builder) LastQueries() []*Query {
 	return b.lastQueries
 }
 
-// LastQuery return last query
+// LastQuery returns the most recently built query, or nil if no queries have been built.
 func (b *Builder) LastQuery() *Query {
 	if len(b.lastQueries) == 0 {
 		return nil
@@ -91,37 +121,42 @@ func (b *Builder) renew(st SQLType) {
 	b.limit = ""
 }
 
-// Clear clear current query & query args
+// Clear resets the current query and its arguments to their initial state.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Clear() *Builder {
 	b.renew(0)
 	return b
 }
 
-// QueryArgs return current query args
+// QueryArgs returns the current list of query arguments that will be used
+// for parameter binding.
 func (b *Builder) QueryArgs() []interface{} {
 	return b.queryArgs
 }
 
-// Query return current sql
+// Query returns the current SQL query string being constructed.
 func (b *Builder) Query() string {
 	return b.query
 }
 
-// Append append query & query args to origin query
+// Append adds the provided string and arguments to the end of the current query.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Append(s string, args ...interface{}) *Builder {
 	b.query += s
 	b.queryArgs = append(b.queryArgs, args...)
 	return b
 }
 
-// AppendPre append query & query args to ahead of origin query
+// AppendPre adds the provided string and arguments to the beginning of the current query.
+// It returns the Builder instance for method chaining.
 func (b *Builder) AppendPre(s string, args ...interface{}) *Builder {
 	b.query = s + b.query
 	b.queryArgs = append(args, b.queryArgs...)
 	return b
 }
 
-// Raw ...
+// Raw sets a raw SQL query string with optional arguments.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Raw(s string, args ...interface{}) *Builder {
 	b.renew(RawSQL)
 	b.query = s
@@ -129,7 +164,10 @@ func (b *Builder) Raw(s string, args ...interface{}) *Builder {
 	return b
 }
 
-// Select ...
+// Select begins a SELECT query with the specified fields.
+// If no fields are provided, it creates an empty SELECT.
+// If "*" is provided as the first field, it selects all columns.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Select(fields ...string) *Builder {
 	b.renew(SelectSQL)
 	b.query = "SELECT"
@@ -146,7 +184,8 @@ func (b *Builder) Select(fields ...string) *Builder {
 	return b
 }
 
-// Insert ...
+// Insert begins an INSERT query for the specified table and optional field names.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
 	b.query = "INSERT INTO " + b.Escape(tableName)
@@ -157,7 +196,9 @@ func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 	return b
 }
 
-// InsertOrUpdate ...
+// InsertOrUpdate begins an INSERT ... ON DUPLICATE KEY UPDATE query for MySQL.
+// It takes field-value pairs that will be used for both the INSERT and UPDATE parts.
+// It returns the Builder instance for method chaining.
 func (b *Builder) InsertOrUpdate(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(InsertSQL)
 	b.query = "INSERT INTO " + b.Escape(tableName)
@@ -179,7 +220,8 @@ func (b *Builder) InsertOrUpdate(tableName string, fvals ...*FieldValue) *Builde
 	return b
 }
 
-// Replace ...
+// Replace begins a REPLACE query for the specified table and optional field names.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
 	b.query = "REPLACE INTO " + b.Escape(tableName)
@@ -190,14 +232,17 @@ func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 	return b
 }
 
-// Into ... for insert or replace
+// Into specifies the fields for an INSERT or REPLACE query.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Into(fields ...string) *Builder {
 	b.query += " (" + b.Escape(fields...) + ")"
 	// b.query += " (`" + strings.Join(fields, "`, `") + "`)"
 	return b
 }
 
-// Values ...
+// Values adds one or more sets of values to an INSERT or REPLACE query.
+// Each set of values must match the number of fields specified in Into().
+// It returns the Builder instance for method chaining.
 func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 	b.query += " VALUES "
 	// index := 0
@@ -222,7 +267,8 @@ func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 	return b
 }
 
-// Update ...
+// Update begins an UPDATE query for the specified table with optional field-value pairs.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(UpdateSQL)
 	b.query = "UPDATE " + b.Escape(tableName) + " SET "
@@ -234,7 +280,8 @@ func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 	return b
 }
 
-// Set ...
+// Set specifies the field-value pairs to update in an UPDATE query.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 	// b.setValue = ""
 
@@ -253,7 +300,8 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 	return b
 }
 
-// Delete ...
+// Delete begins a DELETE query for the specified table.
+// It returns the Builder instance for method chaining.
 func (b *Builder) Delete(tableName string) *Builder {
 	b.renew(DeleteSQL)
 	b.query = "DELETE FROM " + b.Escape(tableName)
@@ -261,7 +309,8 @@ func (b *Builder) Delete(tableName string) *Builder {
 	return b
 }
 
-// Build ...
+// Build finalizes the query construction and returns a Query object along with any errors.
+// It validates the SQL type and any accumulated errors before creating the final query.
 func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 
 	switch b.sqlType {
@@ -283,7 +332,8 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	return q, err
 }
 
-// From ...
+// From specifies the tables to select from in a SELECT query.
+// It returns the Builder instance for method chaining.
 func (b *Builder) From(tables ...string) *Builder {
 	if len(tables) <= 0 {
 		return b
@@ -295,13 +345,34 @@ func (b *Builder) From(tables ...string) *Builder {
 	return b
 }
 
-// FromRaw ...
+// FromRaw specifies a raw FROM clause without any escaping.
+// It returns the Builder instance for method chaining.
 func (b *Builder) FromRaw(from string) *Builder {
 	b.query += " FROM " + from
 	return b
 }
 
-// Where ...
+// Where begins the WHERE clause of a query with the specified conditions.
+// If no conditions are provided, it adds "WHERE 1".
+// It returns the Builder instance for method chaining.
+// addConditions adds one or more conditions to the query.
+// It handles the AND/OR logic between conditions and builds each condition
+// using buildCondition. Any errors encountered during condition building
+// are collected in the Builder's ErrList.
+//
+// Parameters:
+//   - conditions: Variable number of Condition objects to be added
+//
+// Returns:
+//   - *Builder: The Builder instance for method chaining
+//
+// Example:
+//
+//	b.addConditions(
+//	  builder.Eq("status", "active"),
+//	  builder.Gt("age", 18)
+//	)
+//	// Generates: `status` = ? AND `age` > ?
 func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 	condSlice := []string{}
 	for i, cond := range conditions {
@@ -331,7 +402,10 @@ func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 
 }
 
-// And ...
+// And adds one or more conditions to the query using AND logic.
+// If a single condition is provided, it adds "AND condition".
+// If multiple conditions are provided, it adds "AND (condition1 AND condition2 ...)"
+// It returns the Builder instance for method chaining.
 func (b *Builder) And(conditions ...*Condition) *Builder {
 	switch len(conditions) {
 	case 0:
@@ -353,7 +427,10 @@ func (b *Builder) And(conditions ...*Condition) *Builder {
 	return b
 }
 
-// Or ...
+// Or adds one or more conditions to the query using OR logic.
+// If a single condition is provided, it adds "OR condition".
+// If multiple conditions are provided, it adds "OR (condition1 OR condition2 ...)"
+// It returns the Builder instance for method chaining.
 func (b *Builder) Or(conditions ...*Condition) *Builder {
 	switch len(conditions) {
 	case 0:
@@ -376,31 +453,74 @@ func (b *Builder) Or(conditions ...*Condition) *Builder {
 	return b
 }
 
-// In ...
+// In adds an IN condition to the query for the specified field and values.
+// It is equivalent to "field IN (value1, value2, ...)"
+// It returns the Builder instance for method chaining.
+//
+// Example:
+//
+//	b.Select("*").From("users").In("status", "active", "pending")
+//	// Generates: SELECT * FROM users WHERE status IN (?, ?)
+//
+// In creates an IN condition for the specified field and values.
+// It returns the Builder instance for method chaining.
+//
+// Parameters:
+//   - field: The field name to check against
+//   - values: Variable number of values to include in the IN clause
+//
+// Example:
+//
+//	b.Select("*").From("users")
+//	  .Where(builder.In("status", "active", "pending"))
+//	// Generates: SELECT * FROM users WHERE `status` IN (?, ?)
 func (b *Builder) In(field string, values ...interface{}) *Builder {
 	b.addConditions(In(field, values...))
 	return b
 }
 
-// NotIn ...
+// NotIn adds a NOT IN condition to the query for the specified field and values.
+// It is equivalent to "field NOT IN (value1, value2, ...)"
+// It returns the Builder instance for method chaining.
+//
+// Example:
+//
+//	b.Select("*").From("users").NotIn("status", "deleted", "banned")
+//	// Generates: SELECT * FROM users WHERE status NOT IN (?, ?)
 func (b *Builder) NotIn(field string, values ...interface{}) *Builder {
 	b.addConditions(NotIn(field, values...))
 	return b
 }
 
-// Between ...
+// Between adds a BETWEEN condition to the query for the specified field and range values.
+// It expects exactly two values defining the range (start and end).
+// It returns the Builder instance for method chaining.
+//
+// Example:
+//
+//	b.Select("*").From("orders").Between("amount", 100, 1000)
+//	// Generates: SELECT * FROM orders WHERE amount BETWEEN ? AND ?
 func (b *Builder) Between(field string, values ...interface{}) *Builder {
 	b.addConditions(Between(field, values...))
 	return b
 }
 
-// NotBetween ...
+// NotBetween adds a NOT BETWEEN condition to the query for the specified field and range values.
+// It expects exactly two values defining the range (start and end).
+// It returns the Builder instance for method chaining.
+//
+// Example:
+//
+//	b.Select("*").From("orders").NotBetween("amount", 0, 100)
+//	// Generates: SELECT * FROM orders WHERE amount NOT BETWEEN ? AND ?
 func (b *Builder) NotBetween(field string, values ...interface{}) *Builder {
 	b.addConditions(NotBetween(field, values...))
 	return b
 }
 
-// Where ...
+// Where begins the WHERE clause of a query with the specified conditions.
+// If no conditions are provided, it adds "WHERE 1".
+// It returns the Builder instance for method chaining.
 func (b *Builder) Where(conditions ...*Condition) *Builder {
 	b.query += " WHERE "
 	if len(conditions) == 0 {
@@ -412,7 +532,29 @@ func (b *Builder) Where(conditions ...*Condition) *Builder {
 	return b
 }
 
-// WhereRaw ...
+// WhereRaw adds a raw WHERE clause without any escaping or parameter binding.
+// This method is useful when you need to write complex WHERE conditions that
+// cannot be easily expressed using the standard condition builders.
+// It returns the Builder instance for method chaining.
+//
+// Warning: Be careful when using this method with user-provided input as it
+// may lead to SQL injection vulnerabilities. Use the standard Where method
+// with proper parameter binding when possible.
+//
+// Parameters:
+//   - str: The raw WHERE clause string
+//   - args: Optional arguments for parameter binding
+//
+// Example:
+//
+//	// Using raw SQL function
+//	b.Select("*").From("posts")
+//	  .WhereRaw("DATE(created_at) = CURDATE()")
+//
+//	// With parameter binding
+//	b.Select("*").From("users")
+//	  .WhereRaw("FIND_IN_SET(?, roles)", "admin")
+//	// Generates: SELECT * FROM users WHERE FIND_IN_SET(?, roles)
 func (b *Builder) WhereRaw(str string, args ...interface{}) *Builder {
 	b.query += " WHERE "
 	b.query += str
@@ -421,7 +563,36 @@ func (b *Builder) WhereRaw(str string, args ...interface{}) *Builder {
 	return b
 }
 
-// BuildWhere ...
+// buildCondition constructs a SQL condition string and its corresponding query arguments.
+// It handles various SQL operators (=, !=, IN, BETWEEN, etc.) and validates their usage.
+// Returns the condition string, query arguments, and any validation errors.
+//
+// The method validates:
+// - Operator existence in the operMap
+// - Number of values matching the operator requirements
+// - Proper formatting of placeholders based on operator type
+// buildCondition constructs a SQL condition string and its corresponding query arguments.
+// It handles various SQL operators (=, !=, IN, BETWEEN, etc.) and validates their usage.
+// Returns the condition string, query arguments, and any validation errors.
+//
+// Parameters:
+//   - cond: A Condition object containing the field, operator, and values to build the condition
+//
+// Returns:
+//   - str: The constructed SQL condition string
+//   - queryArgs: Slice of arguments for parameter binding
+//   - err: Error if validation fails
+//
+// Supported operators:
+//   - Single value: =, !=, <>, >, >=, <, <=, LIKE, NOT LIKE
+//   - Multiple values: IN, NOT IN
+//   - Range values: BETWEEN, NOT BETWEEN
+//
+// Example:
+//
+//	cond := &Condition{Field: "age", Operator: ">", Values: []interface{}{18}}
+//	str, args, err := builder.buildCondition(cond)
+//	// Generates: `age` > ? with args=[18]
 func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []interface{}, err error) {
 	// if cond == nil {
 	// 	return "", nil, ErrEmptyCondition
@@ -481,7 +652,22 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 	return
 }
 
-// OrderBy ...
+// OrderBy specifies the ORDER BY clause with the given conditions.
+// Each condition determines the field and sort direction (ASC/DESC).
+// Multiple conditions can be combined to sort by multiple fields.
+// It returns the Builder instance for method chaining.
+//
+// Parameters:
+//   - conditions: One or more Condition objects specifying the sort fields and directions
+//
+// Example:
+//
+//	b.Select("*").From("users")
+//	  .OrderBy(
+//	    builder.Asc("created_at"),    // Sort by created_at ASC
+//	    builder.Desc("last_login"),   // Then by last_login DESC
+//	  )
+//	// Generates: SELECT * FROM users ORDER BY `created_at` ASC, `last_login` DESC
 func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 	// order, err := buildOrderBy(conditions)
 	b.query += " ORDER BY "
@@ -506,7 +692,22 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 	return b
 }
 
-// Limit ...
+// Limit adds a LIMIT clause to the query to restrict the number of rows returned.
+// It can be used in two ways:
+// 1. With a single argument to limit the number of rows
+// 2. With two arguments to specify both offset and limit
+//
+// Parameters:
+//   - limitOffset: One or two integers:
+//   - With one argument: The maximum number of rows to return
+//   - With two arguments: The offset and the maximum number of rows
+//
+// Example:
+//
+//	// Limit to 10 rows
+//	b.Select("*").From("users").Limit(10)
+//	// Skip 20 rows and return next 10
+//	b.Select("*").From("users").Limit(20, 10)
 func (b *Builder) Limit(limitOffset ...int) *Builder {
 	// var limit, offset string
 	if len(limitOffset) == 1 {
@@ -521,7 +722,23 @@ func (b *Builder) Limit(limitOffset ...int) *Builder {
 	return b
 }
 
-// Count ...
+// Count begins a SELECT COUNT query.
+// It can count all rows (COUNT(1)) or specific fields/expressions.
+// It returns the Builder instance for method chaining.
+//
+// Parameters:
+//   - query: Optional string(s) to specify what to count (e.g., "DISTINCT column")
+//     If not provided, defaults to COUNT(1)
+//
+// Example:
+//
+//	// Count all rows
+//	b.Count().From("users")
+//	// Generates: SELECT COUNT(1) FROM users
+//
+//	// Count distinct values
+//	b.Count("DISTINCT status").From("orders")
+//	// Generates: SELECT COUNT(DISTINCT status) FROM orders
 func (b *Builder) Count(query ...string) *Builder {
 	b.renew(SelectSQL)
 	b.query = "SELECT COUNT("

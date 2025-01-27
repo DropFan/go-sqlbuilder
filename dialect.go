@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// Dialector eg: ? for mysql, $index for postgresql
 // Dialector defines the interface for SQL dialect-specific operations.
 // It provides methods for handling placeholder styles (e.g., ? for MySQL, $n for PostgreSQL)
 // and identifier escaping conventions for different SQL databases.
@@ -28,8 +27,12 @@ type Dialector interface {
 }
 
 var (
+	// mysqlDialector is the default MySQL dialect implementation
 	mysqlDialector    MysqlDialector
+	// postgresDialector is the PostgreSQL dialect implementation
 	postgresDialector PostgresqlDialector
+	// sqliteDialector is the SQLite dialect implementation
+	sqliteDialector SQLiteDialector
 )
 
 // MysqlDialector implements the Dialector interface for MySQL database.

@@ -498,3 +498,259 @@ func TestOrderBy(t *testing.T) {
 		})
 	}
 }
+
+func TestEq(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "status=active",
+			args: args{
+				field: "status",
+				value: "active",
+			},
+			want: &Condition{
+				Field:    "status",
+				Operator: "=",
+				Values:   []interface{}{"active"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Eq(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Eq() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotEq(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "status!=inactive",
+			args: args{
+				field: "status",
+				value: "inactive",
+			},
+			want: &Condition{
+				Field:    "status",
+				Operator: "!=",
+				Values:   []interface{}{"inactive"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := NotEq(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("NotEq() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestGt(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "age>18",
+			args: args{
+				field: "age",
+				value: 18,
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: ">",
+				Values:   []interface{}{18},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Gt(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Gt() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestGte(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "age>=18",
+			args: args{
+				field: "age",
+				value: 18,
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: ">=",
+				Values:   []interface{}{18},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Gte(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Gte() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestLt(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "age<18",
+			args: args{
+				field: "age",
+				value: 18,
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: "<",
+				Values:   []interface{}{18},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Lt(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Lt() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestLte(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "age<=18",
+			args: args{
+				field: "age",
+				value: 18,
+			},
+			want: &Condition{
+				Field:    "age",
+				Operator: "<=",
+				Values:   []interface{}{18},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Lte(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Lte() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestLike(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "name like John",
+			args: args{
+				field: "name",
+				value: "%John%",
+			},
+			want: &Condition{
+				Field:    "name",
+				Operator: "LIKE",
+				Values:   []interface{}{"%John%"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := Like(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("Like() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotLike(t *testing.T) {
+	type args struct {
+		field string
+		value interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Condition
+	}{
+		{
+			name: "name not like John",
+			args: args{
+				field: "name",
+				value: "%John%",
+			},
+			want: &Condition{
+				Field:    "name",
+				Operator: "NOT LIKE",
+				Values:   []interface{}{"%John%"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotCond := NotLike(tt.args.field, tt.args.value); !reflect.DeepEqual(gotCond, tt.want) {
+				t.Errorf("NotLike() = \n%#v\n, want\n%#v", gotCond, tt.want)
+			}
+		})
+	}
+}
