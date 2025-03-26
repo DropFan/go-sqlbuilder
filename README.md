@@ -147,12 +147,14 @@ query, err := b.Raw("SELECT * FROM users WHERE id = ?", 1).Build()
 ## Contributing
 
 Contributions are welcome! Feel free to:
+
 - Report bugs
 - Suggest new features
 - Submit pull requests
 - Improve documentation
 
 Please ensure your pull request adheres to the following guidelines:
+
 - Write clear and descriptive commit messages
 - Add tests for new features
 - Update documentation as needed
