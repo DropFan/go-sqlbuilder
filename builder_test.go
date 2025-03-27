@@ -121,7 +121,7 @@ func TestSelect(t *testing.T) {
 	if !reflect.DeepEqual(wantArgs, args) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
-	want = "SELECT `id`, `name`, `age`, `sex`, `birthday` FROM `user` WHERE {error: Invalid operator:(operator:![field:test])} AND `name` IN (?, ?) OR `sex` = ? OR `name` = ? AND {error: Invalid number of values with operator:(=[field:test_field])} ORDER BY `age` DESC, `name` ASC LIMIT 100 LIMIT 0, 100"
+	want = "SELECT `id`, `name`, `age`, `sex`, `birthday` FROM `user` WHERE {error: invalid operator:(operator:![field:test])} AND `name` IN (?, ?) OR `sex` = ? OR `name` = ? AND {error: invalid number of values with operator:(=[field:test_field])} ORDER BY `age` DESC, `name` ASC LIMIT 100 LIMIT 0, 100"
 	wantArgs = []interface{}{"coder", "hacker", "female", "coder"}
 	b.Select(d.Fields()...).
 		From("user").
@@ -186,7 +186,7 @@ func TestSelect(t *testing.T) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
 
-	want = "SELECT * FROM `user` WHERE {error: Invalid number of values with operator:(IN[field:city_id])}"
+	want = "SELECT * FROM `user` WHERE {error: invalid number of values with operator:(IN[field:city_id])}"
 	inCityIDs = &Condition{
 		Field:    "city_id",
 		Operator: "IN",
@@ -302,9 +302,17 @@ func TestInsert(t *testing.T) {
 	// 	tableName: "user",
 	// 	Fields:    []string{"id", "name", "age", "sex", "birthday"},
 	// }
-	want = "INSERT INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)"
-	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", 1, "coder", 25, "male", "2000/09/01"}
-	vals := []interface{}{1, "coder", 25, "male", "2000/09/01"}
+	d := &Dao{
+		b:         b,
+		tableName: "user",
+		fields:    []string{"id", "name", "age", "sex", "birthday", "email"},
+	}
+	want = "INSERT INTO `user` (`id`, `name`, `age`, `sex`, `birthday`, `email`) VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)"
+	wantArgs = []interface{}{
+		1, "coder", 25, "male", "2000/09/01", "coder@coder.com",
+		1, "coder", 25, "male", "2000/09/01", "coder@coder.com",
+	}
+	vals := []interface{}{1, "coder", 25, "male", "2000/09/01", "coder@coder.com"}
 	valsGroup := [][]interface{}{vals, vals}
 	b.Insert(d.TableName(), d.Fields()...).
 		Values(valsGroup...)
@@ -323,10 +331,10 @@ func TestInsert(t *testing.T) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
 
-	vals = []interface{}{1, "coder", 25, "male", "2000/09/01"}
+	vals = []interface{}{1, "coder", 25, "male", "2000/09/01", "coder@coder.com"}
 	valsGroup = [][]interface{}{vals}
 
-	want = "REPLACE INTO `user` (`id`, `name`, `age`, `sex`, `birthday`) VALUES (?, ?, ?, ?, ?)"
+	want = "REPLACE INTO `user` (`id`, `name`, `age`, `sex`, `birthday`, `email`) VALUES (?, ?, ?, ?, ?, ?)"
 	b.Replace(d.TableName(), d.Fields()...).
 		Values(valsGroup...)
 	q, err = b.Build()
@@ -336,7 +344,7 @@ func TestInsert(t *testing.T) {
 		t.Errorf("replace error:%s", err)
 	}
 
-	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01"}
+	wantArgs = []interface{}{1, "coder", 25, "male", "2000/09/01", "coder@coder.com"}
 
 	if want != got {
 		t.Errorf("\ngot:\n%s\nwant:\n%s\n", got, want)

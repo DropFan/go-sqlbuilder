@@ -33,8 +33,8 @@ type Builder struct {
 	dialector Dialector
 	// queryArgs holds the arguments for parameter binding in the query
 	queryArgs []interface{}
-	// query stores the current SQL query string being constructed
-	query string
+	// query stores the current SQL query string being constructed using strings.Builder for better performance
+	query strings.Builder
 	// setValues stores the field names being updated in an UPDATE query
 	setValues []string
 	// ErrList collects any errors encountered during query construction
@@ -42,11 +42,12 @@ type Builder struct {
 	// lastQueries maintains a history of all queries built by this instance
 	lastQueries []*Query
 	// The following fields are deprecated and will be removed in a future version:
-	queryTables string   // abandoned
-	from        string   // abandoned
-	where       []string // abandoned
-	orderBy     string   // abandoned
-	limit       string   // abandoned
+
+	// queryTables string // abandoned
+	// from    string     // abandoned
+	// where []string     // abandoned
+	// orderBy string     // abandoned
+	// limit string       // abandoned
 }
 
 // SetDialector sets the SQL dialect for parameter binding placeholders and identifier escaping.
@@ -80,16 +81,16 @@ func (b *Builder) EscapeChar() string {
 // For usage examples, please refer to builder_test.go.
 func New() *Builder {
 	return &Builder{
-		sqlType:     0,
-		dialector:   mysqlDialector,
-		queryTables: "",
-		queryArgs:   []interface{}{},
-		query:       "",
-		from:        "",
-		setValues:   []string{},
-		where:       []string{},
-		orderBy:     "",
-		limit:       "",
+		sqlType:   0,
+		dialector: mysqlDialector,
+		// queryTables: "",
+		queryArgs: []interface{}{},
+		query:     strings.Builder{},
+		// from:      "",
+		setValues: []string{},
+		// where: []string{},
+		// orderBy:     "",
+		// limit:       "",
 		ErrList:     []error{},
 		lastQueries: []*Query{},
 	}
@@ -111,14 +112,30 @@ func (b *Builder) LastQuery() *Query {
 
 // renew reset some data after `Build()` was called
 func (b *Builder) renew(st SQLType) {
-	b.ErrList = []error{}
+	if len(b.ErrList) > 0 {
+		b.ErrList = b.ErrList[:0]
+	} else {
+		b.ErrList = []error{}
+	}
 	b.sqlType = st
-	b.queryArgs = []interface{}{}
-	b.query = ""
-	b.setValues = []string{}
-	b.where = []string{}
-	b.orderBy = ""
-	b.limit = ""
+	if len(b.queryArgs) > 0 {
+		b.queryArgs = b.queryArgs[:0]
+	} else {
+		b.queryArgs = []interface{}{}
+	}
+	b.query.Reset()
+	if len(b.setValues) > 0 {
+		b.setValues = b.setValues[:0]
+	} else {
+		b.setValues = []string{}
+	}
+	// if len(b.where) > 0 {
+	// 	b.where = b.where[:0]
+	// } else {
+	// 	b.where = []string{}
+	// }
+	// b.orderBy = ""
+	// b.limit = ""
 }
 
 // Clear resets the current query and its arguments to their initial state.
@@ -136,13 +153,13 @@ func (b *Builder) QueryArgs() []interface{} {
 
 // Query returns the current SQL query string being constructed.
 func (b *Builder) Query() string {
-	return b.query
+	return b.query.String()
 }
 
 // Append adds the provided string and arguments to the end of the current query.
 // It returns the Builder instance for method chaining.
 func (b *Builder) Append(s string, args ...interface{}) *Builder {
-	b.query += s
+	b.query.WriteString(s)
 	b.queryArgs = append(b.queryArgs, args...)
 	return b
 }
@@ -150,7 +167,10 @@ func (b *Builder) Append(s string, args ...interface{}) *Builder {
 // AppendPre adds the provided string and arguments to the beginning of the current query.
 // It returns the Builder instance for method chaining.
 func (b *Builder) AppendPre(s string, args ...interface{}) *Builder {
-	b.query = s + b.query
+	oldQuery := b.query.String()
+	b.query.Reset()
+	b.query.WriteString(s)
+	b.query.WriteString(oldQuery)
 	b.queryArgs = append(args, b.queryArgs...)
 	return b
 }
@@ -159,7 +179,7 @@ func (b *Builder) AppendPre(s string, args ...interface{}) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) Raw(s string, args ...interface{}) *Builder {
 	b.renew(RawSQL)
-	b.query = s
+	b.query.WriteString(s)
 	b.queryArgs = append(args, b.queryArgs...)
 	return b
 }
@@ -170,14 +190,15 @@ func (b *Builder) Raw(s string, args ...interface{}) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) Select(fields ...string) *Builder {
 	b.renew(SelectSQL)
-	b.query = "SELECT"
+	b.query.WriteString("SELECT")
 
 	if len(fields) <= 0 {
-		b.query += ""
+		// Do nothing
 	} else if fields[0] == "*" {
-		b.query += " *"
+		b.query.WriteString(" *")
 	} else {
-		b.query += " " + b.Escape(fields...)
+		b.query.WriteString(" ")
+		b.query.WriteString(b.Escape(fields...))
 		// b.query += " `" + strings.Join(fields, "`, `") + "`"
 	}
 
@@ -188,7 +209,8 @@ func (b *Builder) Select(fields ...string) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
-	b.query = "INSERT INTO " + b.Escape(tableName)
+	b.query.WriteString("INSERT INTO ")
+	b.query.WriteString(b.Escape(tableName))
 
 	if len(fields) > 0 {
 		b.Into(fields...)
@@ -201,7 +223,8 @@ func (b *Builder) Insert(tableName string, fields ...string) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) InsertOrUpdate(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(InsertSQL)
-	b.query = "INSERT INTO " + b.Escape(tableName)
+	b.query.WriteString("INSERT INTO ")
+	b.query.WriteString(b.Escape(tableName))
 
 	if len(fvals) > 0 {
 		var (
@@ -224,7 +247,8 @@ func (b *Builder) InsertOrUpdate(tableName string, fvals ...*FieldValue) *Builde
 // It returns the Builder instance for method chaining.
 func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 	b.renew(InsertSQL)
-	b.query = "REPLACE INTO " + b.Escape(tableName)
+	b.query.WriteString("REPLACE INTO ")
+	b.query.WriteString(b.Escape(tableName))
 
 	if len(fields) > 0 {
 		b.Into(fields...)
@@ -235,20 +259,32 @@ func (b *Builder) Replace(tableName string, fields ...string) *Builder {
 // Into specifies the fields for an INSERT or REPLACE query.
 // It returns the Builder instance for method chaining.
 func (b *Builder) Into(fields ...string) *Builder {
-	b.query += " (" + b.Escape(fields...) + ")"
+	b.query.WriteString(" (")
+	b.query.WriteString(b.Escape(fields...))
+	b.query.WriteString(")")
 	// b.query += " (`" + strings.Join(fields, "`, `") + "`)"
 	return b
+}
+
+// Predefine placeholder strings for common quantities to avoid runtime calculations.
+// Use the predefined placeholder string when there are less than 6 values.
+var __placeholders = []string{
+	"(?)",
+	"(?, ?)",
+	"(?, ?, ?)",
+	"(?, ?, ?, ?)",
+	"(?, ?, ?, ?, ?)",
 }
 
 // Values adds one or more sets of values to an INSERT or REPLACE query.
 // Each set of values must match the number of fields specified in Into().
 // It returns the Builder instance for method chaining.
 func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
-	b.query += " VALUES "
+	b.query.WriteString(" VALUES ")
 	// index := 0
 	for i, vals := range valsGroup {
 		if i > 0 {
-			b.query += ", "
+			b.query.WriteString(", ")
 		}
 		// b.query += "("
 		// for j, val := range vals {
@@ -261,7 +297,14 @@ func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 		// }
 		// b.query += ")"
 
-		b.query += "(?" + strings.Repeat(", ?", len(vals)-1) + ")"
+		// Use the predefined placeholder string when there are less than 6 values.
+		if len(vals) > 5 {
+			b.query.WriteString("(?")
+			b.query.WriteString(strings.Repeat(", ?", len(vals)-1))
+			b.query.WriteString(")")
+		} else {
+			b.query.WriteString(__placeholders[len(vals)-1])
+		}
 		b.queryArgs = append(b.queryArgs, vals...)
 	}
 	return b
@@ -271,7 +314,9 @@ func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 	b.renew(UpdateSQL)
-	b.query = "UPDATE " + b.Escape(tableName) + " SET "
+	b.query.WriteString("UPDATE ")
+	b.query.WriteString(b.Escape(tableName))
+	b.query.WriteString(" SET ")
 
 	if len(fvals) > 0 {
 		b.Set(fvals...)
@@ -290,10 +335,11 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 			continue
 		}
 		if i > 0 || len(b.setValues) > 0 {
-			b.query += ", "
+			b.query.WriteString(", ")
 		}
 		b.setValues = append(b.setValues, fval.Name)
-		b.query += b.Escape(fval.Name) + " = ?"
+		b.query.WriteString(b.Escape(fval.Name))
+		b.query.WriteString(" = ?")
 		b.queryArgs = append(b.queryArgs, fval.Value)
 	}
 
@@ -304,7 +350,8 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 // It returns the Builder instance for method chaining.
 func (b *Builder) Delete(tableName string) *Builder {
 	b.renew(DeleteSQL)
-	b.query = "DELETE FROM " + b.Escape(tableName)
+	b.query.WriteString("DELETE FROM ")
+	b.query.WriteString(b.Escape(tableName))
 
 	return b
 }
@@ -316,7 +363,7 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	switch b.sqlType {
 	case SelectSQL:
 	case InsertSQL:
-	case InsertOrUpdateSQL:
+	// case InsertOrUpdateSQL:
 	case UpdateSQL:
 	case DeleteSQL:
 	case RawSQL:
@@ -326,7 +373,7 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	if len(b.ErrList) > 0 {
 		err = ErrListIsNotEmpty
 	}
-	q = NewQuery(b.query, b.queryArgs...)
+	q = NewQuery(b.query.String(), b.queryArgs...)
 	b.lastQueries = append(b.lastQueries, q)
 	b.renew(RawSQL)
 	return q, err
@@ -340,7 +387,8 @@ func (b *Builder) From(tables ...string) *Builder {
 	}
 	// b.Tables = tables
 	// b.QueryTables = "`" + strings.Join(tables, "`, `") + "`"
-	b.query += " FROM " + b.Escape(tables...)
+	b.query.WriteString(" FROM ")
+	b.query.WriteString(b.Escape(tables...))
 	// b.query += " FROM `" + strings.Join(tables, "`, `") + "`"
 	return b
 }
@@ -348,7 +396,8 @@ func (b *Builder) From(tables ...string) *Builder {
 // FromRaw specifies a raw FROM clause without any escaping.
 // It returns the Builder instance for method chaining.
 func (b *Builder) FromRaw(from string) *Builder {
-	b.query += " FROM " + from
+	b.query.WriteString(" FROM ")
+	b.query.WriteString(from)
 	return b
 }
 
@@ -374,7 +423,7 @@ func (b *Builder) FromRaw(from string) *Builder {
 //	)
 //	// Generates: `status` = ? AND `age` > ?
 func (b *Builder) addConditions(conditions ...*Condition) *Builder {
-	condSlice := []string{}
+	condSlice := make([]string, 0, len(conditions))
 	for i, cond := range conditions {
 		if cond == nil {
 			continue
@@ -397,7 +446,7 @@ func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 	// 	condSlice = append(condSlice, "1")
 	// }
 	// b.where = append(b.where, strings.Join(condSlice, " "))
-	b.query += strings.Join(condSlice, " ")
+	b.query.WriteString(strings.Join(condSlice, " "))
 	return b
 
 }
@@ -411,12 +460,12 @@ func (b *Builder) And(conditions ...*Condition) *Builder {
 	case 0:
 		return b
 	case 1:
-		b.query += " AND "
+		b.query.WriteString(" AND ")
 		b.addConditions(conditions...)
 	default:
-		b.query += " AND ("
+		b.query.WriteString(" AND (")
 		b.addConditions(conditions...)
-		b.query += ")"
+		b.query.WriteString(")")
 	}
 	// if len(b.where) > 0 {
 	// 	b.where[0] = "(" + b.where[0]
@@ -436,12 +485,12 @@ func (b *Builder) Or(conditions ...*Condition) *Builder {
 	case 0:
 		return b
 	case 1:
-		b.query += " OR "
+		b.query.WriteString(" OR ")
 		b.addConditions(conditions...)
 	default:
-		b.query += " OR ("
+		b.query.WriteString(" OR (")
 		b.addConditions(conditions...)
-		b.query += ")"
+		b.query.WriteString(")")
 	}
 
 	// if len(b.where) > 0 {
@@ -522,9 +571,9 @@ func (b *Builder) NotBetween(field string, values ...interface{}) *Builder {
 // If no conditions are provided, it adds "WHERE 1".
 // It returns the Builder instance for method chaining.
 func (b *Builder) Where(conditions ...*Condition) *Builder {
-	b.query += " WHERE "
+	b.query.WriteString(" WHERE ")
 	if len(conditions) == 0 {
-		b.query += "1"
+		b.query.WriteString("1")
 		return b
 	}
 
@@ -556,8 +605,8 @@ func (b *Builder) Where(conditions ...*Condition) *Builder {
 //	  .WhereRaw("FIND_IN_SET(?, roles)", "admin")
 //	// Generates: SELECT * FROM users WHERE FIND_IN_SET(?, roles)
 func (b *Builder) WhereRaw(str string, args ...interface{}) *Builder {
-	b.query += " WHERE "
-	b.query += str
+	b.query.WriteString(" WHERE ")
+	b.query.WriteString(str)
 	b.queryArgs = append(b.queryArgs, args...)
 
 	return b
@@ -603,7 +652,7 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 
 	if opValue, ok := operMap[cond.Operator]; !ok {
 		// return "", queryArgs,
-		err = fmt.Errorf("Invalid operator:(operator:%s[field:%s])", cond.Operator, cond.Field)
+		err = fmt.Errorf("invalid operator:(operator:%s[field:%s])", cond.Operator, cond.Field)
 		return
 	} else if len(cond.Values) != opValue {
 		switch opValue {
@@ -613,7 +662,7 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 			}
 			fallthrough
 		case 1, 2:
-			err = fmt.Errorf("Invalid number of values with operator:(%s[field:%s])", cond.Operator, cond.Field)
+			err = fmt.Errorf("invalid number of values with operator:(%s[field:%s])", cond.Operator, cond.Field)
 			return
 		}
 	}
@@ -669,8 +718,7 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 //	  )
 //	// Generates: SELECT * FROM users ORDER BY `created_at` ASC, `last_login` DESC
 func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
-	// order, err := buildOrderBy(conditions)
-	b.query += " ORDER BY "
+	b.query.WriteString(" ORDER BY ")
 
 	condStrSlice := []string{}
 
@@ -678,17 +726,17 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 		if cond == nil {
 			continue
 		}
-		condStr := b.Escape(cond.Field)
+		var condStr strings.Builder
+		condStr.WriteString(b.Escape(cond.Field))
 		if cond.Asc {
-			condStr += " ASC"
+			condStr.WriteString(" ASC")
 		} else {
-			condStr += " DESC"
+			condStr.WriteString(" DESC")
 		}
-		condStrSlice = append(condStrSlice, condStr)
+		condStrSlice = append(condStrSlice, condStr.String())
 	}
-	b.query += strings.Join(condStrSlice, ", ")
+	b.query.WriteString(strings.Join(condStrSlice, ", "))
 
-	// b.orderBy = b.buildOrderBy(conditions...)
 	return b
 }
 
@@ -709,16 +757,15 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 //	// Skip 20 rows and return next 10
 //	b.Select("*").From("users").Limit(20, 10)
 func (b *Builder) Limit(limitOffset ...int) *Builder {
-	// var limit, offset string
 	if len(limitOffset) == 1 {
-		b.query += " LIMIT " + strconv.Itoa(limitOffset[0])
+		b.query.WriteString(" LIMIT ")
+		b.query.WriteString(strconv.Itoa(limitOffset[0]))
 	} else {
-		b.query += " LIMIT " +
-			strconv.Itoa(limitOffset[0]) +
-			", " +
-			strconv.Itoa(limitOffset[1])
+		b.query.WriteString(" LIMIT ")
+		b.query.WriteString(strconv.Itoa(limitOffset[0]))
+		b.query.WriteString(", ")
+		b.query.WriteString(strconv.Itoa(limitOffset[1]))
 	}
-	// b.queryArgs = append(b.queryArgs, offset, limit)
 	return b
 }
 
@@ -741,13 +788,13 @@ func (b *Builder) Limit(limitOffset ...int) *Builder {
 //	// Generates: SELECT COUNT(DISTINCT status) FROM orders
 func (b *Builder) Count(query ...string) *Builder {
 	b.renew(SelectSQL)
-	b.query = "SELECT COUNT("
+	b.query.WriteString("SELECT COUNT(")
 	if len(query) <= 0 {
-		b.query += "1"
+		b.query.WriteString("1")
 	} else {
-		b.query += strings.TrimSpace(strings.Join(query, " "))
+		b.query.WriteString(strings.TrimSpace(strings.Join(query, " ")))
 	}
-	b.query += ")"
+	b.query.WriteString(")")
 
 	return b
 }

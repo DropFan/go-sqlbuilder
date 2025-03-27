@@ -28,7 +28,7 @@ type Dialector interface {
 
 var (
 	// mysqlDialector is the default MySQL dialect implementation
-	mysqlDialector    MysqlDialector
+	mysqlDialector MysqlDialector
 	// postgresDialector is the PostgreSQL dialect implementation
 	postgresDialector PostgresqlDialector
 	// sqliteDialector is the SQLite dialect implementation
@@ -59,6 +59,9 @@ type SQLiteDialector struct {
 // Escape wraps MySQL identifiers with backticks and handles multiple identifiers
 // by joining them with "`, `".
 func (MysqlDialector) Escape(s ...string) string {
+	if len(s) == 1 {
+		return "`" + s[0] + "`"
+	}
 	str := strings.Join(s, "`, `")
 	return "`" + strings.Trim(str, "`") + "`"
 }
@@ -76,6 +79,9 @@ func (MysqlDialector) Placeholder(index int) string {
 // Escape wraps PostgreSQL identifiers with double quotes and handles multiple identifiers
 // by joining them with '", "'.
 func (p PostgresqlDialector) Escape(s ...string) string {
+	if len(s) == 1 {
+		return `"` + s[0] + `"`
+	}
 	str := strings.Join(s, `", "`)
 	return `"` + strings.Trim(str, `"`) + `"`
 }
@@ -94,6 +100,9 @@ func (p PostgresqlDialector) Placeholder(index int) string {
 // Escape wraps SQLite identifiers with double quotes and handles multiple identifiers
 // by joining them with '", "'.
 func (s SQLiteDialector) Escape(strs ...string) string {
+	if len(strs) == 1 {
+		return `"` + strs[0] + `"`
+	}
 	str := strings.Join(strs, `", "`)
 	return `"` + strings.Trim(str, `"`) + `"`
 }

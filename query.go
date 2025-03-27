@@ -63,21 +63,30 @@ func NewQuery(q string, args ...interface{}) *Query {
 //
 //	q := NewQuery("SELECT * FROM users WHERE status = ?", "active")
 //	fmt.Println(q.String()) // Outputs: SELECT * FROM users WHERE status = 'active'
-func (q *Query) String() (str string) {
-	str = strings.Replace(q.Query, " = ?", " = '%v'", -1)
-	str = strings.Replace(str, " != ?", " != '%v'", -1)
-	str = strings.Replace(str, " <> ?", " <> '%v'", -1)
-	str = strings.Replace(str, " > ?", " > '%v'", -1)
-	str = strings.Replace(str, " >= ?", " >= '%v'", -1)
-	str = strings.Replace(str, " < ?", " < '%v'", -1)
-	str = strings.Replace(str, " <= ?", " <= '%v'", -1)
-	str = strings.Replace(str, " (?, ", " ('%v', ", -1)
-	str = strings.Replace(str, " (?)", " ('%v')", -1)
-	// str = strings.Replace(str, ", ?)", ", '%v')", -1)
-	str = strings.Replace(str, ", ?", ", '%v'", -1)
-	str = strings.Replace(str, " ?, ", " '%v', ", -1)
-	str = strings.Replace(str, " ? AS ", " '%v' AS ", -1)
-	// str = strings.Replace(str, ", ? ", ", '%v' ", -1)
-	str = fmt.Sprintf(str, q.Args...)
-	return
+func (q *Query) String() string {
+	replacements := map[string]string{
+		" = ?":   " = '%v'",
+		" != ?":  " != '%v'",
+		" <> ?":  " <> '%v'",
+		" > ?":   " > '%v'",
+		" >= ?":  " >= '%v'",
+		" < ?":   " < '%v'",
+		" <= ?":  " <= '%v'",
+		" (?, ":  " ('%v', ",
+		" (?)":   " ('%v')",
+		", ?":    ", '%v'",
+		" ?, ":   " '%v', ",
+		" ? AS ": " '%v' AS ",
+	}
+
+	var result strings.Builder
+	str := q.Query
+
+	for pattern, replacement := range replacements {
+		str = strings.Replace(str, pattern, replacement, -1)
+	}
+
+	result.WriteString(fmt.Sprintf(str, q.Args...))
+
+	return result.String()
 }
