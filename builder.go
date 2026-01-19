@@ -43,6 +43,8 @@ type Builder struct {
 	lastQueries []*Query
 	// argIndex tracks the current parameter index for PostgreSQL-style placeholders ($1, $2, ...)
 	argIndex int
+	// maxHistorySize limits the number of queries stored in lastQueries (0 = unlimited)
+	maxHistorySize int
 	// The following fields are deprecated and will be removed in a future version:
 
 	// queryTables string // abandoned
@@ -79,6 +81,10 @@ func (b *Builder) placeholder() string {
 	return b.dialector.Placeholder(b.argIndex)
 }
 
+// DefaultMaxHistorySize is the default maximum number of queries kept in history.
+// Set to 1024 to prevent memory accumulation while providing sufficient history for debugging.
+const DefaultMaxHistorySize = 1024
+
 // New creates and initializes a new Builder instance with default MySQL dialect.
 // For usage examples, please refer to builder_test.go.
 func New() *Builder {
@@ -95,6 +101,8 @@ func New() *Builder {
 		// limit:       "",
 		ErrList:     []error{},
 		lastQueries: []*Query{},
+
+		maxHistorySize: DefaultMaxHistorySize,
 	}
 }
 
@@ -110,6 +118,30 @@ func (b *Builder) LastQuery() *Query {
 	}
 
 	return b.lastQueries[len(b.lastQueries)-1]
+}
+
+// ClearHistory removes all stored queries from the history.
+// This is useful for long-running applications to prevent memory accumulation.
+// It returns the Builder instance for method chaining.
+func (b *Builder) ClearHistory() *Builder {
+	b.lastQueries = b.lastQueries[:0]
+	return b
+}
+
+// SetMaxHistorySize sets the maximum number of queries to keep in history.
+// When the limit is exceeded, the oldest queries are automatically removed.
+// The default is DefaultMaxHistorySize (1024). Set to 0 for unlimited history.
+// It returns the Builder instance for method chaining.
+func (b *Builder) SetMaxHistorySize(size int) *Builder {
+	if size < 0 {
+		size = 0
+	}
+	b.maxHistorySize = size
+	// Trim existing history if it exceeds the new limit
+	if size > 0 && len(b.lastQueries) > size {
+		b.lastQueries = b.lastQueries[len(b.lastQueries)-size:]
+	}
+	return b
 }
 
 // renew reset some data after `Build()` was called
@@ -355,6 +387,10 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 	}
 	q = NewQuery(b.query.String(), b.queryArgs...)
 	b.lastQueries = append(b.lastQueries, q)
+	// Trim history if it exceeds the maximum size
+	if b.maxHistorySize > 0 && len(b.lastQueries) > b.maxHistorySize {
+		b.lastQueries = b.lastQueries[len(b.lastQueries)-b.maxHistorySize:]
+	}
 	b.renew(RawSQL)
 	return q, err
 }

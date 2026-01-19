@@ -729,3 +729,107 @@ func TestPostgresPlaceholders(t *testing.T) {
 		})
 	}
 }
+
+// TestClearHistory tests the ClearHistory method
+func TestClearHistory(t *testing.T) {
+	b := New()
+
+	// Build some queries
+	b.Select("*").From("users").Build()
+	b.Select("*").From("orders").Build()
+	b.Select("*").From("products").Build()
+
+	if len(b.LastQueries()) != 3 {
+		t.Errorf("expected 3 queries in history, got %d", len(b.LastQueries()))
+	}
+
+	// Clear history
+	b.ClearHistory()
+
+	if len(b.LastQueries()) != 0 {
+		t.Errorf("expected 0 queries after ClearHistory, got %d", len(b.LastQueries()))
+	}
+
+	// Ensure builder still works after clearing
+	b.Select("*").From("test").Build()
+	if len(b.LastQueries()) != 1 {
+		t.Errorf("expected 1 query after new build, got %d", len(b.LastQueries()))
+	}
+}
+
+// TestSetMaxHistorySize tests the SetMaxHistorySize method
+func TestSetMaxHistorySize(t *testing.T) {
+	t.Run("limit history size", func(t *testing.T) {
+		b := New()
+		b.SetMaxHistorySize(3)
+
+		// Build more queries than the limit
+		for i := 0; i < 5; i++ {
+			b.Select("*").From("table").Build()
+		}
+
+		if len(b.LastQueries()) != 3 {
+			t.Errorf("expected 3 queries (max size), got %d", len(b.LastQueries()))
+		}
+	})
+
+	t.Run("trim existing history when setting limit", func(t *testing.T) {
+		b := New()
+
+		// Build some queries first
+		for i := 0; i < 10; i++ {
+			b.Select("*").From("table").Build()
+		}
+
+		if len(b.LastQueries()) != 10 {
+			t.Errorf("expected 10 queries before limit, got %d", len(b.LastQueries()))
+		}
+
+		// Set a smaller limit
+		b.SetMaxHistorySize(3)
+
+		if len(b.LastQueries()) != 3 {
+			t.Errorf("expected 3 queries after setting limit, got %d", len(b.LastQueries()))
+		}
+	})
+
+	t.Run("default history size", func(t *testing.T) {
+		b := New()
+
+		// Build more queries than default limit
+		for i := 0; i < DefaultMaxHistorySize+50; i++ {
+			b.Select("*").From("table").Build()
+		}
+
+		if len(b.LastQueries()) != DefaultMaxHistorySize {
+			t.Errorf("expected %d queries (default max), got %d", DefaultMaxHistorySize, len(b.LastQueries()))
+		}
+	})
+
+	t.Run("unlimited history with zero", func(t *testing.T) {
+		b := New()
+		b.SetMaxHistorySize(0) // Unlimited
+
+		for i := 0; i < 150; i++ {
+			b.Select("*").From("table").Build()
+		}
+
+		if len(b.LastQueries()) != 150 {
+			t.Errorf("expected 150 queries with unlimited history, got %d", len(b.LastQueries()))
+		}
+	})
+
+	t.Run("negative value treated as unlimited", func(t *testing.T) {
+		b := New()
+		b.SetMaxHistorySize(-5) // Treated as 0 (unlimited)
+
+		for i := 0; i < 150; i++ {
+			b.Select("*").From("table").Build()
+		}
+
+		// Negative value should be treated as unlimited (0)
+		if len(b.LastQueries()) != 150 {
+			t.Errorf("expected 150 queries with negative limit (unlimited), got %d", len(b.LastQueries()))
+		}
+	})
+}
