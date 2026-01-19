@@ -41,6 +41,8 @@ type Builder struct {
 	ErrList []error
 	// lastQueries maintains a history of all queries built by this instance
 	lastQueries []*Query
+	// argIndex tracks the current parameter index for PostgreSQL-style placeholders ($1, $2, ...)
+	argIndex int
 	// The following fields are deprecated and will be removed in a future version:
 
 	// queryTables string // abandoned
@@ -69,13 +71,13 @@ func (b *Builder) EscapeChar() string {
 	return b.dialector.GetEscapeChar()
 }
 
-// Placeholder returns the appropriate parameter placeholder for the current SQL dialect
-// at the given position. For example, MySQL uses "?" while PostgreSQL uses "$1", "$2", etc.
-//
-// This method is currently disabled as the placeholder handling is done internally.
-// func (b *Builder) Placeholder(index int) string {
-// 	return b.dialector.Placeholder(index)
-// }
+// placeholder returns the next parameter placeholder for the current SQL dialect
+// and increments the argument index. For MySQL/SQLite it returns "?",
+// for PostgreSQL it returns "$1", "$2", etc.
+func (b *Builder) placeholder() string {
+	b.argIndex++
+	return b.dialector.Placeholder(b.argIndex)
+}
 
 // New creates and initializes a new Builder instance with default MySQL dialect.
 // For usage examples, please refer to builder_test.go.
@@ -118,6 +120,7 @@ func (b *Builder) renew(st SQLType) {
 		b.ErrList = []error{}
 	}
 	b.sqlType = st
+	b.argIndex = 0
 	if len(b.queryArgs) > 0 {
 		b.queryArgs = b.queryArgs[:0]
 	} else {
@@ -266,45 +269,23 @@ func (b *Builder) Into(fields ...string) *Builder {
 	return b
 }
 
-// Predefine placeholder strings for common quantities to avoid runtime calculations.
-// Use the predefined placeholder string when there are less than 6 values.
-var __placeholders = []string{
-	"(?)",
-	"(?, ?)",
-	"(?, ?, ?)",
-	"(?, ?, ?, ?)",
-	"(?, ?, ?, ?, ?)",
-}
-
 // Values adds one or more sets of values to an INSERT or REPLACE query.
 // Each set of values must match the number of fields specified in Into().
 // It returns the Builder instance for method chaining.
 func (b *Builder) Values(valsGroup ...[]interface{}) *Builder {
 	b.query.WriteString(" VALUES ")
-	// index := 0
 	for i, vals := range valsGroup {
 		if i > 0 {
 			b.query.WriteString(", ")
 		}
-		// b.query += "("
-		// for j, val := range vals {
-		// 	index++
-		// 	if j > 0 {
-		// 		b.query += ", "
-		// 	}
-		// 	b.query += b.Placeholder(index)
-		// 	b.queryArgs = append(b.queryArgs, val)
-		// }
-		// b.query += ")"
-
-		// Use the predefined placeholder string when there are less than 6 values.
-		if len(vals) > 5 {
-			b.query.WriteString("(?")
-			b.query.WriteString(strings.Repeat(", ?", len(vals)-1))
-			b.query.WriteString(")")
-		} else {
-			b.query.WriteString(__placeholders[len(vals)-1])
+		b.query.WriteString("(")
+		for j := range vals {
+			if j > 0 {
+				b.query.WriteString(", ")
+			}
+			b.query.WriteString(b.placeholder())
 		}
+		b.query.WriteString(")")
 		b.queryArgs = append(b.queryArgs, vals...)
 	}
 	return b
@@ -328,8 +309,6 @@ func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 // Set specifies the field-value pairs to update in an UPDATE query.
 // It returns the Builder instance for method chaining.
 func (b *Builder) Set(fvals ...*FieldValue) *Builder {
-	// b.setValue = ""
-
 	for i, fval := range fvals {
 		if fval == nil {
 			continue
@@ -339,7 +318,8 @@ func (b *Builder) Set(fvals ...*FieldValue) *Builder {
 		}
 		b.setValues = append(b.setValues, fval.Name)
 		b.query.WriteString(b.Escape(fval.Name))
-		b.query.WriteString(" = ?")
+		b.query.WriteString(" = ")
+		b.query.WriteString(b.placeholder())
 		b.queryArgs = append(b.queryArgs, fval.Value)
 	}
 
@@ -686,11 +666,15 @@ func (b *Builder) buildCondition(cond *Condition) (str string, queryArgs []inter
 		">", ">=",
 		"<", "<=",
 		"like", "not like":
-		placeholders = "?"
+		placeholders = b.placeholder()
 	case "in", "not in":
-		placeholders = "(?" + strings.Repeat(", ?", len(cond.Values)-1) + ")"
+		placeholders = "(" + b.placeholder()
+		for i := 1; i < len(cond.Values); i++ {
+			placeholders += ", " + b.placeholder()
+		}
+		placeholders += ")"
 	case "between", "not between":
-		placeholders += "? AND ?"
+		placeholders = b.placeholder() + " AND " + b.placeholder()
 		// default:
 	}
 

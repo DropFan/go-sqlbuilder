@@ -38,7 +38,7 @@ type FieldValue struct {
 // Parameters:
 //   - name: The name of the database field or column
 //   - value: The value to be assigned to the field
-// 
+//
 // Returns:
 //   - *FieldValue: A pointer to the newly created FieldValue instance
 //

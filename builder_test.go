@@ -531,7 +531,7 @@ func TestSetDialector(t *testing.T) {
 	b.SetDialector(mysqlDialector)
 	t.Logf("mysql escape char:[%v]", b.EscapeChar())
 
-	want = `SELECT * FROM "user" WHERE 1 AND ("name" = ? OR "sex" = ?)`
+	want = `SELECT * FROM "user" WHERE 1 AND ("name" = $1 OR "sex" = $2)`
 	wantArgs = []interface{}{"coder", "female"}
 	b.SetDialector(postgresDialector)
 
@@ -620,5 +620,112 @@ func TestCount(t *testing.T) {
 	lastQuery := lastQueries[len(lastQueries)-1]
 	if lastQuery.Query != got {
 		t.Errorf("\ngot:\n%s\nlast query:\n%s\n", got, lastQuery.Query)
+	}
+}
+
+// TestPostgresPlaceholders tests PostgreSQL-specific placeholder generation ($1, $2, etc.)
+func TestPostgresPlaceholders(t *testing.T) {
+	pb := New()
+	pb.SetDialector(postgresDialector)
+
+	tests := []struct {
+		name     string
+		build    func() (*Query, error)
+		wantSQL  string
+		wantArgs []interface{}
+	}{
+		{
+			name: "SELECT with WHERE conditions",
+			build: func() (*Query, error) {
+				return pb.Select("*").From("users").
+					Where(Eq("name", "john")).And(Gt("age", 18)).Build()
+			},
+			wantSQL:  `SELECT * FROM "users" WHERE "name" = $1 AND "age" > $2`,
+			wantArgs: []interface{}{"john", 18},
+		},
+		{
+			name: "SELECT with IN condition",
+			build: func() (*Query, error) {
+				return pb.Select("*").From("users").
+					Where(In("status", "active", "pending", "verified")).Build()
+			},
+			wantSQL:  `SELECT * FROM "users" WHERE "status" IN ($1, $2, $3)`,
+			wantArgs: []interface{}{"active", "pending", "verified"},
+		},
+		{
+			name: "SELECT with BETWEEN condition",
+			build: func() (*Query, error) {
+				return pb.Select("*").From("orders").
+					Where(Between("amount", 100, 500)).Build()
+			},
+			wantSQL:  `SELECT * FROM "orders" WHERE "amount" BETWEEN $1 AND $2`,
+			wantArgs: []interface{}{100, 500},
+		},
+		{
+			name: "INSERT with multiple values",
+			build: func() (*Query, error) {
+				return pb.Insert("users", "name", "age", "email").
+					Values([]interface{}{"john", 25, "john@example.com"}).Build()
+			},
+			wantSQL:  `INSERT INTO "users" ("name", "age", "email") VALUES ($1, $2, $3)`,
+			wantArgs: []interface{}{"john", 25, "john@example.com"},
+		},
+		{
+			name: "INSERT with multiple rows",
+			build: func() (*Query, error) {
+				return pb.Insert("users", "name", "age").
+					Values(
+						[]interface{}{"john", 25},
+						[]interface{}{"jane", 30},
+					).Build()
+			},
+			wantSQL:  `INSERT INTO "users" ("name", "age") VALUES ($1, $2), ($3, $4)`,
+			wantArgs: []interface{}{"john", 25, "jane", 30},
+		},
+		{
+			name: "UPDATE with SET and WHERE",
+			build: func() (*Query, error) {
+				return pb.Update("users", NewFV("name", "johnny"), NewFV("age", 26)).
+					Where(Eq("id", 1)).Build()
+			},
+			wantSQL:  `UPDATE "users" SET "name" = $1, "age" = $2 WHERE "id" = $3`,
+			wantArgs: []interface{}{"johnny", 26, 1},
+		},
+		{
+			name: "DELETE with WHERE",
+			build: func() (*Query, error) {
+				return pb.Delete("users").Where(Eq("id", 1)).Build()
+			},
+			wantSQL:  `DELETE FROM "users" WHERE "id" = $1`,
+			wantArgs: []interface{}{1},
+		},
+		{
+			name: "Complex query with multiple conditions",
+			build: func() (*Query, error) {
+				return pb.Select("id", "name").From("users").
+					Where(Eq("status", "active")).
+					And(Gt("age", 18)).
+					And(Lt("age", 65)).
+					Or(Eq("role", "admin")).Build()
+			},
+			wantSQL:  `SELECT "id", "name" FROM "users" WHERE "status" = $1 AND "age" > $2 AND "age" < $3 OR "role" = $4`,
+			wantArgs: []interface{}{"active", 18, 65, "admin"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, err := tt.build()
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if q.Query != tt.wantSQL {
+				t.Errorf("\ngot SQL:\n%s\nwant SQL:\n%s", q.Query, tt.wantSQL)
+			}
+			if !reflect.DeepEqual(q.Args, tt.wantArgs) {
+				t.Errorf("\ngot args:\n%#v\nwant args:\n%#v", q.Args, tt.wantArgs)
+			}
+		})
 	}
 }
