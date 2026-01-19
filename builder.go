@@ -144,6 +144,18 @@ func (b *Builder) SetMaxHistorySize(size int) *Builder {
 	return b
 }
 
+// Errors returns all errors accumulated during query construction.
+// This is useful when you need to see all errors, not just the first one.
+// The error list is cleared after each Build() call.
+func (b *Builder) Errors() []error {
+	return b.ErrList
+}
+
+// HasErrors returns true if there are any errors accumulated during query construction.
+func (b *Builder) HasErrors() bool {
+	return len(b.ErrList) > 0
+}
+
 // renew reset some data after `Build()` was called
 func (b *Builder) renew(st SQLType) {
 	if len(b.ErrList) > 0 {
@@ -383,7 +395,7 @@ func (b *Builder) Build(queries ...interface{}) (q *Query, err error) {
 		return nil, ErrEmptySQLType
 	}
 	if len(b.ErrList) > 0 {
-		err = ErrListIsNotEmpty
+		err = b.ErrList[0] // Return the first specific error instead of generic error
 	}
 	q = NewQuery(b.query.String(), b.queryArgs...)
 	b.lastQueries = append(b.lastQueries, q)

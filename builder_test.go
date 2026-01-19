@@ -833,3 +833,53 @@ func TestSetMaxHistorySize(t *testing.T) {
 		}
 	})
 }
+
+// TestErrorHandling tests the improved error handling in Build()
+func TestErrorHandling(t *testing.T) {
+	t.Run("returns specific error instead of generic", func(t *testing.T) {
+		b := New()
+		// Create an invalid IN condition (no values)
+		b.Select("*").From("users").Where(In("id"))
+		q, err := b.Build()
+
+		if err == nil {
+			t.Error("expected an error, got nil")
+		}
+		// Should return the specific error, not ErrListIsNotEmpty
+		if err == ErrListIsNotEmpty {
+			t.Error("should return specific error, not ErrListIsNotEmpty")
+		}
+		// Query should still be returned for debugging
+		if q == nil {
+			t.Error("query should not be nil even with errors")
+		}
+	})
+
+	t.Run("Errors returns all accumulated errors", func(t *testing.T) {
+		b := New()
+		// Create multiple invalid conditions
+		b.Select("*").From("users").
+			Where(In("id")).      // Invalid: no values
+			And(Between("age"))   // Invalid: no values
+
+		if !b.HasErrors() {
+			t.Error("HasErrors should return true")
+		}
+
+		errors := b.Errors()
+		if len(errors) < 2 {
+			t.Errorf("expected at least 2 errors, got %d", len(errors))
+		}
+	})
+
+	t.Run("errors cleared after Build", func(t *testing.T) {
+		b := New()
+		b.Select("*").From("users").Where(In("id"))
+		b.Build()
+
+		// After Build, errors should be cleared
+		if b.HasErrors() {
+			t.Error("errors should be cleared after Build")
+		}
+	})
+}
