@@ -353,13 +353,15 @@ func (b *Builder) Update(tableName string, fvals ...*FieldValue) *Builder {
 // Set specifies the field-value pairs to update in an UPDATE query.
 // It returns the Builder instance for method chaining.
 func (b *Builder) Set(fvals ...*FieldValue) *Builder {
-	for i, fval := range fvals {
+	needComma := len(b.setValues) > 0
+	for _, fval := range fvals {
 		if fval == nil {
 			continue
 		}
-		if i > 0 || len(b.setValues) > 0 {
+		if needComma {
 			b.query.WriteString(", ")
 		}
+		needComma = true
 		b.setValues = append(b.setValues, fval.Name)
 		b.query.WriteString(b.Escape(fval.Name))
 		b.query.WriteString(" = ")
@@ -452,7 +454,7 @@ func (b *Builder) FromRaw(from string) *Builder {
 //	// Generates: `status` = ? AND `age` > ?
 func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 	condSlice := make([]string, 0, len(conditions))
-	for i, cond := range conditions {
+	for _, cond := range conditions {
 		if cond == nil {
 			continue
 		}
@@ -461,9 +463,9 @@ func (b *Builder) addConditions(conditions ...*Condition) *Builder {
 			condStr = fmt.Sprintf("{error: %s}", err)
 			b.ErrList = append(b.ErrList, err)
 		}
-		if cond.AndOr && i > 0 {
+		if cond.AndOr && len(condSlice) > 0 {
 			condStr = "AND " + condStr
-		} else if i > 0 {
+		} else if len(condSlice) > 0 {
 			condStr = "OR " + condStr
 		}
 		condSlice = append(condSlice, condStr)
@@ -601,6 +603,19 @@ func (b *Builder) NotBetween(field string, values ...interface{}) *Builder {
 func (b *Builder) Where(conditions ...*Condition) *Builder {
 	b.query.WriteString(" WHERE ")
 	if len(conditions) == 0 {
+		b.query.WriteString("1")
+		return b
+	}
+
+	hasNonNil := false
+	for _, cond := range conditions {
+		if cond != nil {
+			hasNonNil = true
+			break
+		}
+	}
+	if !hasNonNil {
+		b.ErrList = append(b.ErrList, ErrNilConditions)
 		b.query.WriteString("1")
 		return b
 	}
@@ -789,6 +804,9 @@ func (b *Builder) OrderBy(conditions ...*Condition) *Builder {
 //	// Skip 20 rows and return next 10
 //	b.Select("*").From("users").Limit(20, 10)
 func (b *Builder) Limit(limitOffset ...int) *Builder {
+	if len(limitOffset) == 0 {
+		return b
+	}
 	if len(limitOffset) == 1 {
 		b.query.WriteString(" LIMIT ")
 		b.query.WriteString(strconv.Itoa(limitOffset[0]))

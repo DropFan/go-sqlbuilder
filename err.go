@@ -21,4 +21,7 @@ var (
 	// query construction. This typically indicates invalid SQL syntax or
 	// incompatible operations.
 	ErrListIsNotEmpty = errors.New("there are some errors in SQL, please check your query")
+
+	// ErrNilConditions is returned when all conditions passed to Where() are nil.
+	ErrNilConditions = errors.New("all conditions are nil, using WHERE 1 as fallback")
 )

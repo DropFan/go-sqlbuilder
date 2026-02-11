@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -262,6 +263,72 @@ func TestUpdate(t *testing.T) {
 	if !reflect.DeepEqual(wantArgs, args) {
 		t.Errorf("\ngotArgs:\n%#v\nwantArgs:\n%#v\n", args, wantArgs)
 	}
+}
+
+func TestBuilderEdgeCases(t *testing.T) {
+	t.Run("Where skips nil conditions without injecting OR", func(t *testing.T) {
+		b := New()
+		q, err := b.Select("*").From("user").Where(nil, Eq("id", 1)).Build()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		wantSQL := "SELECT * FROM `user` WHERE `id` = ?"
+		wantArgs := []interface{}{1}
+		if q.Query != wantSQL {
+			t.Fatalf("got SQL %q, want %q", q.Query, wantSQL)
+		}
+		if !reflect.DeepEqual(q.Args, wantArgs) {
+			t.Fatalf("got args %#v, want %#v", q.Args, wantArgs)
+		}
+	})
+
+	t.Run("Where with only nil conditions falls back to WHERE 1 with warning", func(t *testing.T) {
+		b := New()
+		q, err := b.Select("*").From("user").Where(nil).Build()
+		if err == nil {
+			t.Fatal("expected error for nil conditions, got nil")
+		}
+		if !errors.Is(err, ErrNilConditions) {
+			t.Fatalf("expected ErrNilConditions, got %v", err)
+		}
+		wantSQL := "SELECT * FROM `user` WHERE 1"
+		if q.Query != wantSQL {
+			t.Fatalf("got SQL %q, want %q", q.Query, wantSQL)
+		}
+	})
+
+	t.Run("Set skips nil field values without leading comma", func(t *testing.T) {
+		b := New()
+		q, err := b.Update("user").Set(nil, NewFV("name", "alice")).Build()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		wantSQL := "UPDATE `user` SET `name` = ?"
+		wantArgs := []interface{}{"alice"}
+		if q.Query != wantSQL {
+			t.Fatalf("got SQL %q, want %q", q.Query, wantSQL)
+		}
+		if !reflect.DeepEqual(q.Args, wantArgs) {
+			t.Fatalf("got args %#v, want %#v", q.Args, wantArgs)
+		}
+	})
+
+	t.Run("Limit with zero arguments should not panic", func(t *testing.T) {
+		b := New()
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("Limit() panicked: %v", r)
+			}
+		}()
+		q, err := b.Select("*").From("user").Limit().Build()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		wantSQL := "SELECT * FROM `user`"
+		if q.Query != wantSQL {
+			t.Fatalf("got SQL %q, want %q", q.Query, wantSQL)
+		}
+	})
 }
 
 func TestDelete(t *testing.T) {
@@ -859,8 +926,8 @@ func TestErrorHandling(t *testing.T) {
 		b := New()
 		// Create multiple invalid conditions
 		b.Select("*").From("users").
-			Where(In("id")).      // Invalid: no values
-			And(Between("age"))   // Invalid: no values
+			Where(In("id")).    // Invalid: no values
+			And(Between("age")) // Invalid: no values
 
 		if !b.HasErrors() {
 			t.Error("HasErrors should return true")
