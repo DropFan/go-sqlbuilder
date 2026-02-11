@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9] - 2026-02-11
+
+- fix: handle nil conditions in Where() to avoid incorrect AND/OR prefixes (8a4d4d8)
+- fix: handle nil FieldValues in Set() to avoid leading comma (8a4d4d8)
+- fix: add nil-only conditions warning (ErrNilConditions) to ErrList in Where() (8a4d4d8)
+- fix: prevent panic when Limit() called with no arguments (8a4d4d8)
+
 ## [0.0.8] - 2025-01-19
 
 - fix: use dialect-specific placeholders for all query types (3ff275e)
